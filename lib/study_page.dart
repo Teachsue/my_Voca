@@ -15,16 +15,26 @@ class StudyPage extends StatefulWidget {
 
 class _StudyPageState extends State<StudyPage> {
   // 전체 데이터와 현재 페이지 데이터를 분리합니다.
-  List<Word> _allWords = []; // 불러온 전체 단어 (예: 100개)
-  List<Word> _currentWords = []; // 현재 페이지에 보여줄 단어 (20개)
+  List<Word> _allWords = []; // 불러온 전체 단어
+  List<Word> _currentWords = []; // 현재 페이지에 보여줄 단어
 
   int _currentPage = 1; // 현재 페이지 번호
   final int _itemsPerPage = 20; // 페이지당 단어 수
+
+  // ★ 1. 스크롤 제어를 위한 컨트롤러 선언
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  // ★ 2. 화면이 종료될 때 컨트롤러 해제 (메모리 관리)
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _loadData() {
@@ -37,9 +47,6 @@ class _StudyPageState extends State<StudyPage> {
           word.type == 'Word';
     }).toList();
 
-    // (선택사항) 스펠링 순서로 정렬하고 싶다면 주석 해제
-    // _allWords.sort((a, b) => a.spelling.compareTo(b.spelling));
-
     // 2. 첫 페이지 데이터를 설정합니다.
     _updatePageData();
   }
@@ -51,13 +58,9 @@ class _StudyPageState extends State<StudyPage> {
       return;
     }
 
-    // 시작 인덱스 (예: 1페이지면 0, 2페이지면 20)
     int startIndex = (_currentPage - 1) * _itemsPerPage;
-
-    // 끝 인덱스 (데이터 범위를 넘지 않게 min 사용)
     int endIndex = min(startIndex + _itemsPerPage, _allWords.length);
 
-    // 데이터 자르기 (sublist)
     setState(() {
       _currentWords = _allWords.sublist(startIndex, endIndex);
     });
@@ -69,11 +72,15 @@ class _StudyPageState extends State<StudyPage> {
       _currentPage = newPage;
       _updatePageData();
     });
+
+    // ★ 4. 페이지가 바뀌면 스크롤을 맨 위(0)로 즉시 이동
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 전체 페이지 수 계산
     int totalPages = (_allWords.length / _itemsPerPage).ceil();
     if (totalPages == 0) totalPages = 1;
 
@@ -99,18 +106,19 @@ class _StudyPageState extends State<StudyPage> {
             ),
           ),
 
-          // 2. 단어 리스트 (Expanded로 남은 공간 차지)
+          // 2. 단어 리스트
           Expanded(
             child: _currentWords.isEmpty
                 ? const Center(child: Text("등록된 단어가 없습니다."))
                 : ListView.separated(
+                    // ★ 3. 리스트뷰에 컨트롤러 연결
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(20),
                     itemCount: _currentWords.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 15),
                     itemBuilder: (context, index) {
                       final word = _currentWords[index];
-                      // 전체 리스트 기준 번호 계산 (페이지 * 20 + 인덱스)
                       int globalIndex =
                           ((_currentPage - 1) * _itemsPerPage) + index + 1;
 
@@ -170,7 +178,6 @@ class _StudyPageState extends State<StudyPage> {
                                 ],
                               ),
                             ),
-                            // 듣기 버튼 (아이콘만 있음, 기능은 추후 TTS 구현 시 사용)
                             Icon(
                               Icons.volume_up_rounded,
                               color: Colors.grey[300],
@@ -202,7 +209,7 @@ class _StudyPageState extends State<StudyPage> {
                 ElevatedButton(
                   onPressed: _currentPage > 1
                       ? () => _changePage(_currentPage - 1)
-                      : null, // 1페이지면 비활성화
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
@@ -215,7 +222,7 @@ class _StudyPageState extends State<StudyPage> {
                   child: const Icon(Icons.chevron_left),
                 ),
 
-                // 페이지 번호 표시 ( 1 / 5 )
+                // 페이지 번호 표시
                 Text(
                   "$_currentPage / $totalPages",
                   style: const TextStyle(
@@ -228,7 +235,7 @@ class _StudyPageState extends State<StudyPage> {
                 ElevatedButton(
                   onPressed: _currentPage < totalPages
                       ? () => _changePage(_currentPage + 1)
-                      : null, // 마지막 페이지면 비활성화
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,

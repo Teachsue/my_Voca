@@ -205,7 +205,7 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
         context,
         MaterialPageRoute(
           builder: (context) => TodaysQuizResultPage(
-            wrongAnswers: _wrongAnswersList,
+            wrongAnswers: _wrongAnswersList, // 이 리스트가 비어있으면 만점 화면이 나옵니다.
             totalCount: _quizData.length,
           ),
         ),

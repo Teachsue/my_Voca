@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
-// [중요] 프로젝트에 있는 파일들이 맞는지 확인해주세요!
+// [중요] 필요한 파일들이 모두 import 되어 있어야 합니다.
 import 'word_model.dart';
 import 'data_loader.dart';
 import 'todays_quiz_page.dart';
@@ -12,6 +12,7 @@ import 'study_page.dart';
 import 'calendar_page.dart';
 import 'study_record_service.dart';
 import 'wrong_answer_page.dart';
+import 'todays_word_list_page.dart'; // ★ 단어 리스트 페이지 import 필수
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -134,11 +135,11 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 30),
 
-              // [2] 메인 배너
+              // [2] 메인 배너 (오늘의 단어)
               GestureDetector(
                 onTap: () async {
-                  await _startTodaysQuiz(); // 클래스 내부 함수 호출
-                  _refresh();
+                  await _startTodaysQuiz(); // 퀴즈 시작 로직 호출
+                  _refresh(); // 퀴즈 끝나고 돌아오면 화면 갱신
                 },
                 child: Container(
                   width: double.infinity,
@@ -333,44 +334,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- 기능 함수들 (클래스 내부로 이동하여 에러 방지) ---
+  // ----------------------------------------------------------------------
+  // 아래 기능 함수들: _HomePageState 클래스 내부에 있어야 에러가 안 납니다!
+  // ----------------------------------------------------------------------
+
+  // 오늘의 단어 시작 함수
+  // [lib/main.dart 내부의 함수]
 
   Future<void> _startTodaysQuiz() async {
     final box = Hive.box<Word>('words');
     final cacheBox = Hive.box('cache');
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    bool isCompleted = cacheBox.get(
-      "today_completed_$todayStr",
-      defaultValue: false,
-    );
 
-    if (isCompleted) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text("학습 완료! 🎉"),
-          content: const Text("오늘의 학습을 이미 완료하셨습니다.\n내일 새로운 단어로 만나요!"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                "확인",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
+    // 오늘의 단어 목록 키
     final String todayKey = "today_list_$todayStr";
     List<Word> todaysWords = [];
 
+    // 1. 목록 불러오기
     if (cacheBox.containsKey(todayKey)) {
       List<String> savedSpellings = List<String>.from(cacheBox.get(todayKey));
       final allWords = box.values.toList();
@@ -382,6 +362,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // 2. 목록 생성하기 (없을 경우)
     if (todaysWords.isEmpty) {
       final allWords = box.values.where((w) => w.type == 'Word').toList();
       if (allWords.isEmpty) {
@@ -398,19 +379,50 @@ class _HomePageState extends State<HomePage> {
       cacheBox.put(todayKey, spellingsToSave);
     }
 
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TodaysQuizPage(words: todaysWords),
-      ),
+    // 3. 완료 여부 확인 및 페이지 이동
+    bool isCompleted = cacheBox.get(
+      "today_completed_$todayStr",
+      defaultValue: false,
     );
+
+    if (!mounted) return;
+
+    if (isCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("오늘 학습을 완료하셨네요! 복습을 위해 단어장을 보여드릴게요. 📖"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // ★ 여기가 수정된 포인트! isCompleted: true를 전달합니다.
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TodaysWordListPage(
+            words: todaysWords,
+            isCompleted: true, // 복습 모드 켜기
+          ),
+        ),
+      );
+    } else {
+      // 퀴즈 전 모드
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TodaysWordListPage(
+            words: todaysWords,
+            isCompleted: false, // 기본 모드
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _showLevelDialog(String category, List<String> levels) async {
     await showDialog(
       context: context,
-      builder: (BuildContext ctx) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
@@ -426,8 +438,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  Navigator.pop(ctx);
-                  _showModeSelectionDialog(category, level);
+                  Navigator.pop(dialogContext); // 다이얼로그 닫기
+                  _showModeSelectionDialog(category, level); // 다음 단계
                 },
               );
             }).toList(),
@@ -440,7 +452,7 @@ class _HomePageState extends State<HomePage> {
   void _showModeSelectionDialog(String category, String level) {
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -451,7 +463,7 @@ class _HomePageState extends State<HomePage> {
           actions: [
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.pop(ctx);
+                Navigator.pop(dialogContext);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -471,7 +483,7 @@ class _HomePageState extends State<HomePage> {
             ),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.pop(ctx);
+                Navigator.pop(dialogContext);
                 _checkSavedQuizAndStart(category, level);
               },
               icon: const Icon(Icons.edit_note_rounded),
@@ -501,7 +513,7 @@ class _HomePageState extends State<HomePage> {
   void _showResumeDialog(String category, String level) {
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
@@ -511,14 +523,14 @@ class _HomePageState extends State<HomePage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(ctx);
+                Navigator.pop(dialogContext);
                 _showQuestionCountDialog(category, level);
               },
               child: const Text("새로 시작", style: TextStyle(color: Colors.red)),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(ctx);
+                Navigator.pop(dialogContext);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -544,7 +556,7 @@ class _HomePageState extends State<HomePage> {
   void _showQuestionCountDialog(String category, String level) {
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
+      builder: (BuildContext dialogContext) {
         return SimpleDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
@@ -553,7 +565,7 @@ class _HomePageState extends State<HomePage> {
           children: [10, 20, 30].map((count) {
             return SimpleDialogOption(
               onPressed: () {
-                Navigator.pop(ctx);
+                Navigator.pop(dialogContext);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
