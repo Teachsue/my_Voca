@@ -188,16 +188,10 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
       });
       _saveProgress(); // 이어풀기 저장
     } else {
-      // ★★★ [추가] 퀴즈 완료 시 '오늘 완료' 도장 찍기 ★★★
-      final cacheBox = Hive.box('cache');
-      String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      // ★ 중요: 여기서 '오늘 완료' 도장을 찍거나 StudyRecordService를 호출하면 안 됩니다!
+      // 오직 진행 중이던 임시 데이터만 삭제하고 결과 페이지로 넘어갑니다.
 
-      // "today_completed_2026-02-15" 라는 키로 true 저장
-      cacheBox.put("today_completed_$todayStr", true);
-
-      // 진행 중 데이터는 이제 필요 없으니 삭제
-      _clearProgress();
-      await StudyRecordService.markTodayAsDone();
+      _clearProgress(); // 진행 중 데이터(index 등)만 삭제
 
       if (!mounted) return;
 
@@ -205,7 +199,7 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
         context,
         MaterialPageRoute(
           builder: (context) => TodaysQuizResultPage(
-            wrongAnswers: _wrongAnswersList, // 이 리스트가 비어있으면 만점 화면이 나옵니다.
+            wrongAnswers: _wrongAnswersList,
             totalCount: _quizData.length,
           ),
         ),

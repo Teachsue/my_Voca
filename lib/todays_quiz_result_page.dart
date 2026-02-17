@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // 추가
+import 'package:intl/intl.dart'; // 추가
+import 'study_record_service.dart'; // 추가
 
 class TodaysQuizResultPage extends StatelessWidget {
   final List<Map<String, dynamic>> wrongAnswers;
@@ -25,7 +28,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 1. 만점 화면
+  // 1. 만점 화면 (여기서만 '완료' 처리를 합니다)
   Widget _buildPerfectView(BuildContext context) {
     return Center(
       child: Padding(
@@ -72,9 +75,22 @@ class TodaysQuizResultPage extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // ★ [중요] 메인 화면(첫 번째 화면)까지 모든 창을 닫습니다.
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                onPressed: () async {
+                  // ★ [핵심] 만점일 때만 완료 데이터 저장
+                  final cacheBox = Hive.box('cache');
+                  final String todayStr = DateFormat(
+                    'yyyy-MM-dd',
+                  ).format(DateTime.now());
+
+                  // 오늘 완료 여부 저장
+                  cacheBox.put("today_completed_$todayStr", true);
+
+                  // 학습 기록 서비스에 완료 보고 (배너 색상 변경용)
+                  await StudyRecordService.markTodayAsDone();
+
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
@@ -85,7 +101,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                   elevation: 5,
                 ),
                 child: const Text(
-                  "메인으로 돌아가기",
+                  "학습 완료 (메인으로)",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -96,7 +112,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 2. 오답 화면
+  // 2. 오답 화면 (저장 로직 없이 메인으로 돌아갑니다)
   Widget _buildWrongAnswerView(BuildContext context, int score) {
     return Column(
       children: [
@@ -117,7 +133,7 @@ class TodaysQuizResultPage extends StatelessWidget {
           child: Column(
             children: [
               const Text(
-                "Quiz Result",
+                "아쉬워요! 조금만 더 힘내세요 💪",
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
               const SizedBox(height: 10),
@@ -126,12 +142,12 @@ class TodaysQuizResultPage extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: Colors.redAccent,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                "${wrongAnswers.length}개를 틀렸어요. 다시 확인해볼까요?",
+                "${wrongAnswers.length}개를 틀렸어요. 다시 도전해볼까요?",
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             ],
@@ -208,11 +224,11 @@ class TodaysQuizResultPage extends StatelessWidget {
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                // ★ [중요] 오답 확인 후에도 메인으로 돌아갑니다.
+                // 저장 로직 없이 메인으로 돌아감 -> 배너는 여전히 파란색(미완료)
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
+                backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -220,7 +236,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                 elevation: 3,
               ),
               child: const Text(
-                "확인 (메인으로)",
+                "다시 도전하기",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
