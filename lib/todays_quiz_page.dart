@@ -104,11 +104,19 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
         .where((w) => w.type == 'Word')
         .toList();
 
-    // ★ [수정] 원본 리스트를 복사해서 무작위로 섞습니다.
-    List<Word> shuffledWords = List<Word>.from(widget.words);
-    shuffledWords.shuffle();
+    // ★ [수정 핵심] 오늘 날짜를 숫자로 바꿔서 '고정된 랜덤 시드'로 사용합니다.
+    // 예: 2026-02-17 -> 20260217
+    String dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
+    int dateSeed = int.parse(dateStr);
+    Random randomSeed = Random(dateSeed); // 고정된 시드값 생성
 
-    // 이제 widget.words 대신 순서가 섞인 shuffledWords를 사용합니다.
+    // 원본 리스트 복사
+    List<Word> shuffledWords = List<Word>.from(widget.words);
+
+    // ★ shuffle 할 때 생성한 randomSeed를 넣어줍니다.
+    // 오늘 하루 동안은 언제 실행해도 결과가 똑같습니다.
+    shuffledWords.shuffle(randomSeed);
+
     for (var targetWord in shuffledWords) {
       String correctAnswer = targetWord.meaning;
 
@@ -117,10 +125,11 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
           .map((w) => w.meaning)
           .toList();
 
-      distractors.shuffle();
+      // 보기(distractors)도 섞을 때 동일한 시드를 쓰면 보기 순서도 고정됩니다.
+      distractors.shuffle(randomSeed);
       List<String> options = distractors.take(3).toList();
       options.add(correctAnswer);
-      options.shuffle();
+      options.shuffle(randomSeed);
 
       Map<String, String> optionSpellings = {};
       optionSpellings[correctAnswer] = targetWord.spelling;
