@@ -48,3 +48,4 @@ node_modules/
 .env
 .vscode/
 *.json
+assets/json/*.json

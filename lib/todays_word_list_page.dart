@@ -161,7 +161,7 @@ class TodaysWordListPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        isCompleted ? "복습 완료 (메인으로)" : "다 외웠어요! 퀴즈 시작",
+                        isCompleted ? "복습 완료!" : "다 외웠어요! 퀴즈 시작",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
