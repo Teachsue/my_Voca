@@ -14,6 +14,7 @@ import 'wrong_answer_page.dart';
 import 'todays_word_list_page.dart';
 import 'level_test_page.dart';
 import 'day_selection_page.dart'; // ★ 추가
+import 'statistics_page.dart'; // ★ 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -393,14 +394,21 @@ class _HomePageState extends State<HomePage> {
                         _refresh();
                       },
                     ),
+                    // ★ 변경: 학습 통계 버튼을 누르면 StatisticsPage로 이동하도록 수정
                     _buildMenuCard(
                       title: "학습 통계",
-                      subtitle: "준비중...",
+                      subtitle: "내 실력 한눈에 보기", // 서브타이틀도 "준비중..."에서 멋지게 변경!
                       icon: Icons.bar_chart_rounded,
                       color: Colors.purpleAccent,
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("멋진 통계 기능을 준비하고 있어요! 🚧")),
-                      ),
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const StatisticsPage(),
+                          ),
+                        );
+                        _refresh(); // 갔다 오면 상태를 다시 한 번 갱신해 줍니다.
+                      },
                     ),
                   ],
                 ),

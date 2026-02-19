@@ -1,0 +1,294 @@
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
+import 'word_model.dart';
+
+class StatisticsPage extends StatefulWidget {
+  const StatisticsPage({super.key});
+
+  @override
+  State<StatisticsPage> createState() => _StatisticsPageState();
+}
+
+class _StatisticsPageState extends State<StatisticsPage> {
+  int _totalWordsCount = 0;
+  int _wrongAnswersCount = 0;
+  bool _isTodayCompleted = false;
+  String _recommendedLevel = "미응시";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatistics();
+  }
+
+  void _loadStatistics() {
+    // 1. 전체 단어 수
+    final wordBox = Hive.box<Word>('words');
+    _totalWordsCount = wordBox.values.where((w) => w.type == 'Word').length;
+
+    // 2. 오답 노트 단어 수
+    if (Hive.isBoxOpen('wrong_answers')) {
+      final wrongBox = Hive.box<Word>('wrong_answers');
+      _wrongAnswersCount = wrongBox.length;
+    }
+
+    // 3. 오늘 학습 완료 여부 & 추천 레벨
+    final cacheBox = Hive.box('cache');
+    final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    _isTodayCompleted = cacheBox.get(
+      "today_completed_$todayStr",
+      defaultValue: false,
+    );
+    _recommendedLevel = cacheBox.get(
+      'user_recommended_level',
+      defaultValue: "미응시",
+    );
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text(
+          "학습 통계 📊",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "나의 학습 현황",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // [1] 레벨 & 오늘의 학습 상태 (가로 배치)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    title: "추천 학습 레벨",
+                    value: _recommendedLevel == "미응시"
+                        ? "평가 필요"
+                        : "TOEIC\n$_recommendedLevel",
+                    icon: Icons.psychology_alt_rounded,
+                    color: Colors.indigo,
+                    isSmallText: _recommendedLevel == "미응시",
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _buildStatCard(
+                    title: "오늘의 목표",
+                    value: _isTodayCompleted ? "달성 완료" : "진행 중",
+                    icon: _isTodayCompleted
+                        ? Icons.check_circle_rounded
+                        : Icons.directions_run_rounded,
+                    color: _isTodayCompleted ? Colors.green : Colors.orange,
+                    isSmallText: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+
+            // [2] 취약점 분석 (오답 노트)
+            _buildWideStatCard(
+              title: "현재 복습이 필요한 단어",
+              subtitle: "오답 노트에 쌓인 단어 수입니다. 틈틈이 복습해주세요!",
+              value: "$_wrongAnswersCount개",
+              icon: Icons.note_alt_rounded,
+              color: Colors.redAccent,
+              progressValue: _totalWordsCount > 0
+                  ? (_wrongAnswersCount / _totalWordsCount)
+                  : 0.0,
+            ),
+            const SizedBox(height: 15),
+
+            // [3] 앱 데이터 현황
+            _buildWideStatCard(
+              title: "포켓보카 전체 단어량",
+              subtitle: "현재 앱에 등록된 학습 가능한 총 단어 수입니다.",
+              value: "$_totalWordsCount개",
+              icon: Icons.storage_rounded,
+              color: Colors.blueAccent,
+              progressValue: 1.0, // 꽉 찬 게이지바
+            ),
+
+            const SizedBox(height: 40),
+            Center(
+              child: Text(
+                "꾸준함이 실력을 만듭니다!\n오늘도 파이팅하세요 🔥",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[500],
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 정사각형 형태의 통계 카드 위젯
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    bool isSmallText = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.06),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isSmallText ? 20 : 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 직사각형 형태의 넓은 통계 카드 위젯 (프로그레스 바 포함)
+  Widget _buildWideStatCard({
+    required String title,
+    required String subtitle,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required double progressValue,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.06),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // 프로그레스 바 (시각적 효과)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progressValue.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: Colors.grey[100],
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
