@@ -192,13 +192,24 @@ class _LevelTestPageState extends State<LevelTestPage> {
 
   void _showResultDialog() {
     String recommendedLevel = '500';
-    if (_levelScores['900+']! >= 3) {
+
+    // ★ 수정된 판정 로직
+    // 1순위 (900+): 상급 3개 이상 '동시에' 중급 4개 이상 & 초급 4개 이상 정답
+    if (_levelScores['900+']! >= 3 &&
+        _levelScores['700']! >= 4 &&
+        _levelScores['500']! >= 4) {
       recommendedLevel = '900+';
-    } else if (_levelScores['700']! >= 3) {
+    }
+    // 2순위 (700): 상급 조건은 미달이지만, 중급 3개 이상 '동시에' 초급 3개 이상 정답
+    else if (_levelScores['700']! >= 3 && _levelScores['500']! >= 3) {
       recommendedLevel = '700';
     }
+    // 그 외: 500 레벨로 배정
+    else {
+      recommendedLevel = '500';
+    }
 
-    // ★ 추가: 테스트 완료 날짜와 추천 레벨을 함께 저장합니다.
+    // 테스트 완료 날짜와 추천 레벨 저장
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     Hive.box('cache').put('user_recommended_level', recommendedLevel);
     Hive.box('cache').put('level_test_completed_date', todayStr);
@@ -224,7 +235,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
             const Text("분석 결과, 사용자님께 추천하는 레벨은", textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(
-              recommendedLevel,
+              "TOEIC $recommendedLevel", // TOEIC 문구 추가로 가독성 향상
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
