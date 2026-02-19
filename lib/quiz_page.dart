@@ -53,12 +53,11 @@ class _QuizPageState extends State<QuizPage> {
       final allWords = wordBox.values.toList();
 
       _quizList = [];
-      // [추가] 불러올 때도 중복 체크를 위한 Set (정규화된 철자 저장)
       final Set<String> seenNormalized = {};
 
       for (String spelling in savedSpellings) {
         final normalized = spelling.trim().toLowerCase();
-        if (seenNormalized.contains(normalized)) continue; // 이미 처리된 단어는 건너뜀
+        if (seenNormalized.contains(normalized)) continue;
 
         try {
           final word = allWords.firstWhere(
@@ -66,9 +65,7 @@ class _QuizPageState extends State<QuizPage> {
           );
           _quizList.add(word);
           seenNormalized.add(normalized);
-        } catch (e) {
-          // 일치하는 단어가 없는 경우 무시
-        }
+        } catch (e) {}
       }
 
       if (mounted) {
@@ -109,7 +106,6 @@ class _QuizPageState extends State<QuizPage> {
     final box = Hive.box<Word>('words');
     final allWords = box.values.toList();
 
-    // [수정] 정규화된 철자를 키로 사용하는 Map
     final Map<String, Word> uniqueQuizMap = {};
 
     for (var word in allWords) {
@@ -117,7 +113,6 @@ class _QuizPageState extends State<QuizPage> {
           word.level == widget.level &&
           word.type == 'Quiz') {
         final key = word.spelling.trim().toLowerCase();
-        // 가장 먼저 발견된 단어 하나만 유지
         if (!uniqueQuizMap.containsKey(key)) {
           uniqueQuizMap[key] = word;
         }
@@ -144,27 +139,15 @@ class _QuizPageState extends State<QuizPage> {
 
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
+    final allWords = box.values.toList();
 
-    // [수정] 모든 Word 타입 데이터도 중복 제거 후 리스트화
-    final Map<String, Word> uniqueCandidateMap = {};
-    for (var w in box.values) {
-      if (w.type == 'Word') {
-        final key = w.spelling.trim().toLowerCase();
-        if (!uniqueCandidateMap.containsKey(key)) {
-          uniqueCandidateMap[key] = w;
-        }
-      }
-    }
-
-    final allWordCandidates = uniqueCandidateMap.values.toList();
-    _quizData = []; // 기존 데이터 초기화 (중요)
+    _quizData = [];
 
     for (var targetQuiz in _quizList) {
       String correctAnswer = targetQuiz.correctAnswer ?? "";
       List<String> options = [];
 
       if (targetQuiz.options != null && targetQuiz.options!.isNotEmpty) {
-        // [추가] 옵션 자체에 중복이 있을 경우를 대비한 처리
         options = targetQuiz.options!.map((o) => o.trim()).toSet().toList();
         options.shuffle();
       } else {
@@ -174,15 +157,38 @@ class _QuizPageState extends State<QuizPage> {
       Map<String, String> optionMeanings = {};
 
       for (String option in options) {
+        final normalizedOption = option.trim().toLowerCase();
+        String foundMeaning = "뜻 없음";
+
         try {
-          final normalizedOption = option.trim().toLowerCase();
-          final matchingWord = allWordCandidates.firstWhere(
-            (w) => w.spelling.trim().toLowerCase() == normalizedOption,
+          // 1단계: 정확히 일치하는 Word 타입 검색
+          final exactMatch = allWords.firstWhere(
+            (w) =>
+                w.type == 'Word' &&
+                w.spelling.trim().toLowerCase() == normalizedOption,
           );
-          optionMeanings[option] = matchingWord.meaning;
-        } catch (e) {
-          optionMeanings[option] = "";
+          foundMeaning = exactMatch.meaning;
+        } catch (_) {
+          try {
+            // 2단계 (중요): 변형어 처리 (follows -> follow, followed -> follow 검색)
+            // 선택지 글자가 단어장 단어로 시작하는지 체크 (예: 'follows' startsWith 'follow')
+            final stemMatch = allWords.firstWhere(
+              (w) =>
+                  w.type == 'Word' &&
+                  normalizedOption.startsWith(
+                    w.spelling.trim().toLowerCase(),
+                  ) &&
+                  w.spelling.length > 2, // 'a', 'to' 같은 짧은 단어 방지
+            );
+            foundMeaning = stemMatch.meaning;
+          } catch (_) {
+            // 3단계: 정답과 같은 경우 퀴즈 데이터 자체의 뜻을 활용
+            if (normalizedOption == correctAnswer.trim().toLowerCase()) {
+              foundMeaning = targetQuiz.meaning;
+            }
+          }
         }
+        optionMeanings[option] = foundMeaning;
       }
 
       _quizData.add({
@@ -201,27 +207,32 @@ class _QuizPageState extends State<QuizPage> {
     if (_isChecked) return;
 
     final currentQuestion = _quizData[_currentIndex];
+    final Map<String, String> optionMeanings = Map<String, String>.from(
+      currentQuestion['optionMeanings'] ?? {},
+    );
+
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
-    // [수정됨] 틀렸을 경우 안전하게 복사해서 저장
     if (!correct) {
-      // 1. 박스가 열려있는지 확인 (안전장치)
       if (Hive.isBoxOpen('wrong_answers')) {
         final wrongBox = Hive.box<Word>('wrong_answers');
 
         if (currentQuestion['word'] != null) {
           final originWord = currentQuestion['word'] as Word;
+          final String correctSpelling = currentQuestion['correctAnswer'] ?? "";
+          String realWordMeaning =
+              optionMeanings[correctSpelling] ?? originWord.meaning;
 
           try {
-            // ★ 핵심: .copy()를 사용하여 새로운 객체로 저장!
-            // (Hive 충돌 방지)
-            final newWord = originWord.copy();
-
-            wrongBox.put(newWord.spelling, newWord);
-            print("📝 오답노트 저장 성공: ${newWord.spelling}");
-          } catch (e) {
-            print("❌ 오답 저장 실패: $e");
-          }
+            final wordForWrongNote = Word(
+              category: originWord.category,
+              level: originWord.level,
+              type: 'Word',
+              spelling: correctSpelling,
+              meaning: realWordMeaning,
+            );
+            wrongBox.put(wordForWrongNote.spelling, wordForWrongNote);
+          } catch (e) {}
         }
       }
     }
@@ -236,7 +247,10 @@ class _QuizPageState extends State<QuizPage> {
       _wrongAnswersList.add({
         'spelling': currentQuestion['spelling'],
         'userAnswer': selectedAnswer,
+        'userAnswerMeaning': optionMeanings[selectedAnswer] ?? "뜻 없음",
         'correctAnswer': currentQuestion['correctAnswer'],
+        'correctAnswerMeaning':
+            optionMeanings[currentQuestion['correctAnswer']] ?? "뜻 없음",
       });
     }
   }
@@ -280,8 +294,9 @@ class _QuizPageState extends State<QuizPage> {
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
-    final optionMeanings =
-        currentQuestion['optionMeanings'] as Map<String, String>;
+    final optionMeanings = Map<String, String>.from(
+      currentQuestion['optionMeanings'] ?? {},
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -348,7 +363,6 @@ class _QuizPageState extends State<QuizPage> {
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                // 문제 카드
                 Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(minHeight: 200),
@@ -395,7 +409,7 @@ class _QuizPageState extends State<QuizPage> {
 
                   if (_isChecked) {
                     String meaning = optionMeanings[option] ?? "";
-                    if (meaning.isNotEmpty) {
+                    if (meaning.isNotEmpty && meaning != "뜻 없음") {
                       buttonText += "\n($meaning)";
                     }
 
@@ -462,27 +476,40 @@ class _QuizPageState extends State<QuizPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
                               _isCorrect ? Icons.check_circle : Icons.error,
                               color: _isCorrect ? Colors.green : Colors.red,
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              _isCorrect
-                                  ? "정답입니다!"
-                                  : "틀렸어요! 정답: ${currentQuestion['correctAnswer']}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: _isCorrect
-                                    ? Colors.green[900]
-                                    : Colors.red[900],
+                            Expanded(
+                              child: Text(
+                                _isCorrect
+                                    ? "정답입니다!\n${currentQuestion['correctAnswer']} (${optionMeanings[currentQuestion['correctAnswer']] ?? '뜻 없음'})"
+                                    : "내가 쓴 답 : $_userSelectedAnswer (${optionMeanings[_userSelectedAnswer] ?? '뜻 없음'})\n정답 : ${currentQuestion['correctAnswer']} (${optionMeanings[currentQuestion['correctAnswer']] ?? '뜻 없음'})",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  height: 1.5,
+                                  color: _isCorrect
+                                      ? Colors.green[900]
+                                      : Colors.red[900],
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Text(
+                          "💡 해설",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           currentQuestion['explanation'] ?? "해설이 없습니다.",
                           style: const TextStyle(
