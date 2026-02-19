@@ -139,8 +139,18 @@ class _QuizPageState extends State<QuizPage> {
 
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
-    final allWords = box.values.toList();
 
+    final Map<String, Word> uniqueCandidateMap = {};
+    for (var w in box.values) {
+      if (w.type == 'Word') {
+        final key = w.spelling.trim().toLowerCase();
+        if (!uniqueCandidateMap.containsKey(key)) {
+          uniqueCandidateMap[key] = w;
+        }
+      }
+    }
+
+    final allWordCandidates = uniqueCandidateMap.values.toList();
     _quizData = [];
 
     for (var targetQuiz in _quizList) {
@@ -157,38 +167,15 @@ class _QuizPageState extends State<QuizPage> {
       Map<String, String> optionMeanings = {};
 
       for (String option in options) {
-        final normalizedOption = option.trim().toLowerCase();
-        String foundMeaning = "뜻 없음";
-
         try {
-          // 1단계: 정확히 일치하는 Word 타입 검색
-          final exactMatch = allWords.firstWhere(
-            (w) =>
-                w.type == 'Word' &&
-                w.spelling.trim().toLowerCase() == normalizedOption,
+          final normalizedOption = option.trim().toLowerCase();
+          final matchingWord = allWordCandidates.firstWhere(
+            (w) => w.spelling.trim().toLowerCase() == normalizedOption,
           );
-          foundMeaning = exactMatch.meaning;
-        } catch (_) {
-          try {
-            // 2단계 (중요): 변형어 처리 (follows -> follow, followed -> follow 검색)
-            // 선택지 글자가 단어장 단어로 시작하는지 체크 (예: 'follows' startsWith 'follow')
-            final stemMatch = allWords.firstWhere(
-              (w) =>
-                  w.type == 'Word' &&
-                  normalizedOption.startsWith(
-                    w.spelling.trim().toLowerCase(),
-                  ) &&
-                  w.spelling.length > 2, // 'a', 'to' 같은 짧은 단어 방지
-            );
-            foundMeaning = stemMatch.meaning;
-          } catch (_) {
-            // 3단계: 정답과 같은 경우 퀴즈 데이터 자체의 뜻을 활용
-            if (normalizedOption == correctAnswer.trim().toLowerCase()) {
-              foundMeaning = targetQuiz.meaning;
-            }
-          }
+          optionMeanings[option] = matchingWord.meaning;
+        } catch (e) {
+          optionMeanings[option] = "";
         }
-        optionMeanings[option] = foundMeaning;
       }
 
       _quizData.add({
@@ -207,21 +194,33 @@ class _QuizPageState extends State<QuizPage> {
     if (_isChecked) return;
 
     final currentQuestion = _quizData[_currentIndex];
-    final Map<String, String> optionMeanings = Map<String, String>.from(
-      currentQuestion['optionMeanings'] ?? {},
-    );
-
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
     if (!correct) {
       if (Hive.isBoxOpen('wrong_answers')) {
         final wrongBox = Hive.box<Word>('wrong_answers');
+        final wordBox = Hive.box<Word>('words'); // 전체 단어 데이터가 있는 박스
 
         if (currentQuestion['word'] != null) {
           final originWord = currentQuestion['word'] as Word;
           final String correctSpelling = currentQuestion['correctAnswer'] ?? "";
+
+          // ★ 핵심 수정: 전체 단어장에서 해당 단어의 '진짜 뜻' 검색
           String realWordMeaning =
-              optionMeanings[correctSpelling] ?? originWord.meaning;
+              originWord.meaning; // 찾지 못할 경우를 대비한 기본값(문장해석)
+
+          try {
+            // type이 'Word'이면서 철자가 정답과 일치하는 첫 번째 데이터를 찾음
+            final matchingWord = wordBox.values.firstWhere(
+              (w) =>
+                  w.type == 'Word' &&
+                  w.spelling.trim().toLowerCase() ==
+                      correctSpelling.trim().toLowerCase(),
+            );
+            realWordMeaning = matchingWord.meaning; // 찾은 단어의 뜻으로 교체!
+          } catch (e) {
+            print("🔍 단어장에서 해당 단어의 개별 뜻을 찾지 못했습니다.");
+          }
 
           try {
             final wordForWrongNote = Word(
@@ -229,10 +228,16 @@ class _QuizPageState extends State<QuizPage> {
               level: originWord.level,
               type: 'Word',
               spelling: correctSpelling,
-              meaning: realWordMeaning,
+              meaning: realWordMeaning, // ★ 이제 문장 해석이 아닌 단어 뜻이 들어감
             );
+
             wrongBox.put(wordForWrongNote.spelling, wordForWrongNote);
-          } catch (e) {}
+            print(
+              "📝 오답노트 저장 완료: ${wordForWrongNote.spelling} (${wordForWrongNote.meaning})",
+            );
+          } catch (e) {
+            print("❌ 오답 저장 실패: $e");
+          }
         }
       }
     }
@@ -247,10 +252,7 @@ class _QuizPageState extends State<QuizPage> {
       _wrongAnswersList.add({
         'spelling': currentQuestion['spelling'],
         'userAnswer': selectedAnswer,
-        'userAnswerMeaning': optionMeanings[selectedAnswer] ?? "뜻 없음",
         'correctAnswer': currentQuestion['correctAnswer'],
-        'correctAnswerMeaning':
-            optionMeanings[currentQuestion['correctAnswer']] ?? "뜻 없음",
       });
     }
   }
@@ -294,9 +296,8 @@ class _QuizPageState extends State<QuizPage> {
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
-    final optionMeanings = Map<String, String>.from(
-      currentQuestion['optionMeanings'] ?? {},
-    );
+    final optionMeanings =
+        currentQuestion['optionMeanings'] as Map<String, String>;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -409,7 +410,7 @@ class _QuizPageState extends State<QuizPage> {
 
                   if (_isChecked) {
                     String meaning = optionMeanings[option] ?? "";
-                    if (meaning.isNotEmpty && meaning != "뜻 없음") {
+                    if (meaning.isNotEmpty) {
                       buttonText += "\n($meaning)";
                     }
 
@@ -476,7 +477,8 @@ class _QuizPageState extends State<QuizPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start, // 텍스트가 길어질 경우를 대비
                           children: [
                             Icon(
                               _isCorrect ? Icons.check_circle : Icons.error,
@@ -484,9 +486,10 @@ class _QuizPageState extends State<QuizPage> {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
+                              // ★ 핵심 수정 영역
                               child: Text(
                                 _isCorrect
-                                    ? "정답입니다!\n${currentQuestion['correctAnswer']} (${optionMeanings[currentQuestion['correctAnswer']] ?? '뜻 없음'})"
+                                    ? "정답입니다!\n${currentQuestion['correctAnswer']} (${optionMeanings[currentQuestion['correctAnswer']] ?? ''})"
                                     : "내가 쓴 답 : $_userSelectedAnswer (${optionMeanings[_userSelectedAnswer] ?? '뜻 없음'})\n정답 : ${currentQuestion['correctAnswer']} (${optionMeanings[currentQuestion['correctAnswer']] ?? '뜻 없음'})",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,

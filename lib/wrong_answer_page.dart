@@ -59,8 +59,8 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 박스에 있는 모든 단어를 가져옵니다.
-    final wrongWords = _wrongBox.values.toList();
+    // ★ 변경: 박스의 모든 단어를 가져와 최신순(역순)으로 정렬합니다.
+    final wrongWords = _wrongBox.values.toList().reversed.toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -69,9 +69,9 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        // ★ 추가: AppBar 우측 액션 버튼
+        // ★ 추가: AppBar 우측에 전체 삭제 버튼 배치
         actions: [
-          if (wrongWords.isNotEmpty) // 오답이 있을 때만 휴지통 아이콘 표시
+          if (wrongWords.isNotEmpty) // 오답이 있을 때만 버튼 표시
             IconButton(
               icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
               onPressed: _showDeleteAllDialog,
@@ -143,7 +143,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                           ],
                         ),
                       ),
-                      // 삭제 버튼 (휴지통)
+                      // 개별 삭제 버튼
                       IconButton(
                         icon: const Icon(
                           Icons.delete_outline,
