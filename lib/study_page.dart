@@ -1,13 +1,21 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+// import 'package:hive_flutter/hive_flutter.dart'; // 더 이상 이 페이지에서 Hive를 직접 호출하지 않으므로 주석/삭제해도 무방합니다.
 import 'word_model.dart';
 
 class StudyPage extends StatefulWidget {
   final String category;
   final String level;
+  final int dayNumber; // ★ 추가: 몇 번째 DAY인지 나타내는 변수
+  final List<Word> dayWords; // ★ 추가: 해당 DAY에 할당된 단어 리스트
 
-  const StudyPage({super.key, required this.category, required this.level});
+  const StudyPage({
+    super.key,
+    required this.category,
+    required this.level,
+    required this.dayNumber,
+    required this.dayWords,
+  });
 
   @override
   State<StudyPage> createState() => _StudyPageState();
@@ -25,7 +33,9 @@ class _StudyPageState extends State<StudyPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // ★ 변경: Hive에서 불러오는 대신, 생성자로 전달받은 단어 리스트를 바로 사용합니다.
+    _allWords = widget.dayWords;
+    _updatePageData();
   }
 
   @override
@@ -34,7 +44,7 @@ class _StudyPageState extends State<StudyPage> {
     super.dispose();
   }
 
-  // ★ 추가: 페이지 이동 다이얼로그 함수
+  // 페이지 이동 다이얼로그 함수
   void _showJumpToPageDialog() {
     final int totalPages = (_allWords.length / _itemsPerPage).ceil();
     final TextEditingController pageEditingController = TextEditingController();
@@ -69,10 +79,9 @@ class _StudyPageState extends State<StudyPage> {
                 if (targetPage != null &&
                     targetPage >= 1 &&
                     targetPage <= totalPages) {
-                  _changePage(targetPage); // 기존에 만든 페이지 변경 함수 호출
+                  _changePage(targetPage);
                   Navigator.pop(context);
                 } else {
-                  // 범위를 벗어난 경우 스낵바 알림
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("1에서 $totalPages 사이의 숫자를 입력해주세요.")),
                   );
@@ -84,18 +93,6 @@ class _StudyPageState extends State<StudyPage> {
         );
       },
     );
-  }
-
-  void _loadData() {
-    final box = Hive.box<Word>('words');
-
-    _allWords = box.values.where((word) {
-      return word.category == widget.category &&
-          word.level == widget.level &&
-          word.type == 'Word';
-    }).toList();
-
-    _updatePageData();
   }
 
   void _updatePageData() {
@@ -131,15 +128,17 @@ class _StudyPageState extends State<StudyPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text("${widget.category} ${widget.level}"), // 제목 간소화
+        // ★ 변경: 상단 타이틀에 DAY 번호가 표시되도록 수정
+        title: Text(
+          "${widget.category} ${widget.level} - DAY ${widget.dayNumber}",
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        // ★ 추가: AppBar 우측에 검색 아이콘 추가
         actions: [
           IconButton(
             icon: const Icon(Icons.find_in_page_outlined),
-            onPressed: _showJumpToPageDialog, // 다이얼로그 호출
+            onPressed: _showJumpToPageDialog,
             tooltip: "페이지 이동",
           ),
           const SizedBox(width: 10),
@@ -264,7 +263,6 @@ class _StudyPageState extends State<StudyPage> {
                   child: const Icon(Icons.chevron_left),
                 ),
 
-                // ★ 추가 기능: 하단 페이지 번호를 눌러도 이동 다이얼로그가 뜨게 하면 더 편리합니다.
                 GestureDetector(
                   onTap: _showJumpToPageDialog,
                   child: Text(
@@ -272,7 +270,7 @@ class _StudyPageState extends State<StudyPage> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline, // 클릭 가능하다는 표시
+                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),

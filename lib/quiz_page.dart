@@ -9,11 +9,17 @@ class QuizPage extends StatefulWidget {
   final String level;
   final int questionCount;
 
+  // ★ 추가: 특정 DAY 퀴즈를 위한 변수 (선택적)
+  final int? dayNumber;
+  final List<Word>? dayWords;
+
   const QuizPage({
     super.key,
     required this.category,
     required this.level,
     required this.questionCount,
+    this.dayNumber,
+    this.dayWords,
   });
 
   @override
@@ -34,21 +40,22 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    _cacheKey = "quiz_match_${widget.category}_${widget.level}";
+    // ★ 변경: DAY 퀴즈인지, 일반 퀴즈인지에 따라 캐시 키를 다르게 설정하여 충돌 방지
+    _cacheKey = widget.dayNumber != null
+        ? "quiz_day_${widget.category}_${widget.level}_${widget.dayNumber}"
+        : "quiz_match_${widget.category}_${widget.level}";
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkProgressAndInitialize();
     });
   }
 
-  // 1. 진행 상황 체크 및 초기화
   void _checkProgressAndInitialize() {
     final cacheBox = Hive.box('cache');
     final savedData = cacheBox.get(_cacheKey);
 
     if (savedData != null) {
       int savedIndex = savedData['index'] ?? 0;
-      // 한 문제라도 풀었다면 이어풀기 팝업, 아니면 새로 시작
       if (savedIndex > 0) {
         _showResumeDialog(savedData);
       } else {
@@ -60,7 +67,6 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // 2. 이어풀기 알림창
   void _showResumeDialog(dynamic savedData) {
     showDialog(
       context: context,
@@ -73,7 +79,8 @@ class _QuizPageState extends State<QuizPage> {
             onPressed: () {
               _clearProgress();
               Navigator.pop(context);
-              _loadNewQuizData(widget.questionCount);
+              int count = widget.questionCount > 0 ? widget.questionCount : 10;
+              _loadNewQuizData(count);
             },
             child: const Text("새로 풀기", style: TextStyle(color: Colors.grey)),
           ),
@@ -90,7 +97,6 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-  // 3. 캐시 복구 (안전하게 spelling으로 다시 찾기)
   void _restoreFromCache(dynamic savedData) {
     final wordBox = Hive.box<Word>('words');
     final allWords = wordBox.values.toList();
@@ -102,21 +108,18 @@ class _QuizPageState extends State<QuizPage> {
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
 
-        // 중요: quizData 내부에 저장된 정보를 기반으로 Word 객체를 다시 매칭
         _quizData = (savedData['quizData'] as List)
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
 
         _quizList = [];
         for (var data in _quizData) {
-          // 문제로 나온 단어 철자를 기준으로 다시 찾음
           final word = allWords.firstWhere(
             (w) => w.spelling == data['question'] && w.type == 'Word',
             orElse: () =>
                 allWords.firstWhere((w) => w.spelling == data['question']),
           );
           _quizList.add(word);
-          // quizData 안의 word 객체 참조도 갱신 (캐스팅 에러 방지)
           data['word'] = word;
         }
       });
@@ -126,35 +129,38 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // 4. 새 퀴즈 생성
   void _loadNewQuizData(int count) {
-    final box = Hive.box<Word>('words');
-
-    // type이 'Word'인 데이터만 필터링
-    List<Word> filteredList = box.values.where((word) {
-      return word.category == widget.category &&
-          word.level == widget.level &&
-          word.type == 'Word';
-    }).toList();
-
-    // 만약 'Word' 타입이 하나도 없다면 모든 타입에서 다시 검색 (방어 로직)
-    if (filteredList.isEmpty) {
-      filteredList = box.values.where((word) {
-        return word.category == widget.category && word.level == widget.level;
+    // ★ 추가: DAY 단어 리스트가 들어왔다면, 해당 단어들로만 퀴즈 구성 (랜덤 섞기)
+    if (widget.dayWords != null && widget.dayWords!.isNotEmpty) {
+      _quizList = List<Word>.from(widget.dayWords!);
+      _quizList.shuffle(); // 문제 순서를 랜덤으로 섞음
+    }
+    // 기존 로직: 전체 랜덤 퀴즈일 경우
+    else {
+      final box = Hive.box<Word>('words');
+      List<Word> filteredList = box.values.where((word) {
+        return word.category == widget.category &&
+            word.level == widget.level &&
+            word.type == 'Word';
       }).toList();
+
+      if (filteredList.isEmpty) {
+        filteredList = box.values.where((word) {
+          return word.category == widget.category && word.level == widget.level;
+        }).toList();
+      }
+
+      final Map<String, Word> uniqueMap = {};
+      for (var w in filteredList) {
+        uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
+      }
+
+      List<Word> finalPool = uniqueMap.values.toList();
+      finalPool.shuffle();
+
+      int targetCount = count > 0 ? count : 10;
+      _quizList = finalPool.take(min(targetCount, finalPool.length)).toList();
     }
-
-    final Map<String, Word> uniqueMap = {};
-    for (var w in filteredList) {
-      uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
-    }
-
-    List<Word> finalPool = uniqueMap.values.toList();
-    finalPool.shuffle();
-
-    // 요청한 문제 수만큼 가져옴 (데이터가 부족하면 있는 만큼만)
-    int targetCount = count > 0 ? count : 10;
-    _quizList = finalPool.take(min(targetCount, finalPool.length)).toList();
 
     if (_quizList.isNotEmpty) {
       _generateQuizQuestions();
@@ -164,7 +170,6 @@ class _QuizPageState extends State<QuizPage> {
     if (mounted) setState(() {});
   }
 
-  // 5. 보기 생성 로직
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
     final allWords = box.values.where((w) => w.type == 'Word').toList();
@@ -172,6 +177,7 @@ class _QuizPageState extends State<QuizPage> {
 
     for (var word in _quizList) {
       String correctAnswer = word.meaning;
+      // 오답 보기는 DAY 상관없이 전체 단어 중에서 가져오므로 난이도 유지
       List<Word> distractorsPool = allWords
           .where(
             (w) => w.meaning != correctAnswer && w.spelling != word.spelling,
@@ -198,7 +204,6 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // 6. 정답 확인 및 오답 저장
   void _checkAnswer(String selectedAnswer) {
     if (_isChecked) return;
 
@@ -263,8 +268,6 @@ class _QuizPageState extends State<QuizPage> {
 
   void _saveProgress() {
     final cacheBox = Hive.box('cache');
-    // Hive 저장을 위해 Map에서 Word 객체를 잠시 제거하거나 철자로 변환하여 저장하는 것이 안전함
-    // 여기서는 로직 단순화를 위해 현재 quizData를 저장하되 복구 시 보정함
     cacheBox.put(_cacheKey, {
       'index': _currentIndex,
       'wrongAnswers': _wrongAnswersList,
@@ -276,13 +279,10 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 로딩 중이거나 데이터가 진짜 없는 경우 처리
     if (_quizList.isEmpty && _quizData.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text("퀴즈")),
-        body: const Center(
-          child: Text("해당 레벨에 학습 데이터가 없습니다.\n다른 레벨을 선택해 보세요!"),
-        ),
+        body: const Center(child: Text("해당 레벨에 학습 데이터가 없습니다.")),
       );
     }
 
@@ -298,12 +298,15 @@ class _QuizPageState extends State<QuizPage> {
       (k, v) => MapEntry(k.toString(), v.toString()),
     );
 
+    // ★ 변경: DAY 퀴즈일 경우 상단 타이틀 다르게 표시
+    String appBarTitle = widget.dayNumber != null
+        ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizList.length})"
+        : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizList.length})";
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(
-          "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizList.length})",
-        ),
+        title: Text(appBarTitle, style: const TextStyle(fontSize: 16)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,

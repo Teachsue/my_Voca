@@ -7,12 +7,13 @@ import 'package:intl/intl.dart';
 import 'word_model.dart';
 import 'data_loader.dart';
 import 'quiz_page.dart';
-import 'study_page.dart';
+import 'study_page.dart'; // 만약을 위해 남겨둠
 import 'calendar_page.dart';
 import 'study_record_service.dart';
 import 'wrong_answer_page.dart';
 import 'todays_word_list_page.dart';
 import 'level_test_page.dart';
+import 'day_selection_page.dart'; // ★ 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -232,16 +233,14 @@ class _HomePageState extends State<HomePage> {
 
                     const SizedBox(height: 16),
 
-                    // ★ 실력 진단 배너 (하루 1회 제한 로직 추가)
+                    // 실력 진단 배너
                     GestureDetector(
                       onTap: () async {
-                        // 저장된 마지막 완료 날짜를 가져옵니다.
                         final String lastCompletedDate = cacheBox.get(
                           'level_test_completed_date',
                           defaultValue: '',
                         );
 
-                        // 오늘 이미 응시했다면 팝업 띄우고 차단
                         if (todayStr == lastCompletedDate) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -255,7 +254,6 @@ class _HomePageState extends State<HomePage> {
                           return;
                         }
 
-                        // 아니면 레벨 테스트 입장
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -372,7 +370,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     _buildMenuCard(
                       title: "OPIc",
-                      subtitle: "말하기 연습",
+                      subtitle: "오픽 단어 연습",
                       icon: Icons.record_voice_over_rounded,
                       color: Colors.orangeAccent,
                       onTap: () async {
@@ -562,8 +560,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
+                    // ★ 핵심 변경 부분: StudyPage 대신 DaySelectionPage로 이동
                     builder: (context) =>
-                        StudyPage(category: category, level: level),
+                        DaySelectionPage(category: category, level: level),
                   ),
                 );
               },
