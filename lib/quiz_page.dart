@@ -98,11 +98,20 @@ class _QuizPageState extends State<QuizPage> {
     final box = Hive.box<Word>('words');
     final allWords = box.values.toList();
 
-    List<Word> filteredList = allWords.where((word) {
-      return word.category == widget.category &&
+    // [수정됨] Map을 사용하여 spelling 기준 중복 제거
+    final Map<String, Word> uniqueQuizMap = {};
+
+    for (var word in allWords) {
+      if (word.category == widget.category &&
           word.level == widget.level &&
-          word.type == 'Quiz';
-    }).toList();
+          word.type == 'Quiz') {
+        // 이미 해당 철자가 Map에 들어있지 않은 경우에만 추가 (첫 번째 단어만 로드)
+        uniqueQuizMap.putIfAbsent(word.spelling, () => word);
+      }
+    }
+
+    // 중복이 제거된 리스트 생성
+    List<Word> filteredList = uniqueQuizMap.values.toList();
 
     filteredList.shuffle();
 
@@ -123,21 +132,19 @@ class _QuizPageState extends State<QuizPage> {
 
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
-    final allWordCandidates = box.values
-        .where((w) => w.type == 'Word')
-        .toList();
+
+    // [수정됨] 오답 후보군 및 의미 데이터 로드 시에도 중복 제거
+    final Map<String, Word> uniqueCandidateMap = {};
+    for (var w in box.values) {
+      if (w.type == 'Word') {
+        uniqueCandidateMap.putIfAbsent(w.spelling, () => w);
+      }
+    }
+
+    final allWordCandidates = uniqueCandidateMap.values.toList();
 
     for (var targetQuiz in _quizList) {
       String correctAnswer = targetQuiz.correctAnswer ?? "";
-
-      List<String> distractors = allWordCandidates
-          .where(
-            (w) =>
-                w.meaning != targetQuiz.meaning &&
-                w.spelling != targetQuiz.correctAnswer,
-          )
-          .map((w) => w.meaning)
-          .toList();
 
       List<String> options = [];
 
@@ -152,6 +159,7 @@ class _QuizPageState extends State<QuizPage> {
 
       for (String option in options) {
         try {
+          // 중복이 제거된 후보군에서 검색
           final matchingWord = allWordCandidates.firstWhere(
             (w) => w.spelling.toLowerCase() == option.toLowerCase(),
           );
