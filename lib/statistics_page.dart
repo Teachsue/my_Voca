@@ -58,6 +58,163 @@ class _StatisticsPageState extends State<StatisticsPage> {
     setState(() {});
   }
 
+  void _resetLevelTest() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "실력 진단 초기화",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            "기존 레벨 테스트 결과가 삭제되며\n메인 화면에서 다시 응시할 수 있습니다.\n진행하시겠습니까?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("취소", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final cacheBox = Hive.box('cache');
+                cacheBox.delete('user_recommended_level');
+                cacheBox.delete('level_test_progress');
+
+                setState(() {
+                  _recommendedLevel = "미응시";
+                });
+
+                Navigator.pop(dialogContext);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("레벨 테스트가 초기화되었습니다. 다시 도전해보세요! ✨"),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "초기화",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _resetAllRecords() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text(
+                "전체 기록 초기화",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            "학습한 단어장, 오답 노트, 오늘의 퀴즈 완료 현황, 레벨 테스트 등 모든 개인 학습 데이터가 영구적으로 삭제됩니다.\n\n정말 처음부터 다시 시작하시겠습니까?",
+            style: TextStyle(height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                "취소",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // 1. 오답 노트 비우기
+                if (Hive.isBoxOpen('wrong_answers')) {
+                  await Hive.box<Word>('wrong_answers').clear();
+                }
+
+                // 2. 캐시 데이터 비우기 (학습 기록, 레벨테스트 결과, 진행상황 등 전부 날아감)
+                await Hive.box('cache').clear();
+
+                // ★ 3. 캘린더 학습 기록 비우기 (StudyRecordService에서 사용하는 박스)
+                try {
+                  if (Hive.isBoxOpen('study_records')) {
+                    await Hive.box('study_records').clear();
+                  } else {
+                    // 혹시 박스가 닫혀있다면 열어서 지우기
+                    final recordBox = await Hive.openBox('study_records');
+                    await recordBox.clear();
+                  }
+                } catch (e) {
+                  print("캘린더 데이터 초기화 실패: $e");
+                }
+
+                // 4. 현재 화면의 상태 업데이트
+                setState(() {
+                  _wrongAnswersCount = 0;
+                  _learnedWordsCount = 0;
+                  _isTodayCompleted = false;
+                  _recommendedLevel = "미응시";
+                });
+
+                if (!mounted) return;
+                Navigator.pop(dialogContext); // 팝업 닫기
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("모든 학습 기록 및 캘린더가 깔끔하게 초기화되었습니다! 🧹"),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.black87,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "전체 초기화",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     double progressRatio = _totalWordsCount > 0
@@ -91,17 +248,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             const SizedBox(height: 20),
 
-            // ★ 변경: IntrinsicHeight와 stretch를 활용해 두 박스의 높이를 완벽히 똑같이 고정합니다.
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      title: "추천 레벨", // 깔끔함을 위해 글자 축소
+                      title: "추천 레벨",
                       value: _recommendedLevel == "미응시"
                           ? "평가 필요"
-                          : "TOEIC $_recommendedLevel", // 두 줄(\n) 대신 한 줄로!
+                          : "TOEIC $_recommendedLevel",
                       icon: Icons.psychology_alt_rounded,
                       color: Colors.indigo,
                     ),
@@ -122,7 +278,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             const SizedBox(height: 15),
 
-            // [2] 전체 학습 진도율 (마스터한 단어)
             _buildWideStatCard(
               title: "전체 학습 진도율 ($percentString%)",
               subtitle: "퀴즈에서 한 번 이상 정답을 맞춘 단어의 비율입니다. 꾸준히 게이지를 채워보세요!",
@@ -133,7 +288,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             const SizedBox(height: 15),
 
-            // [3] 취약점 분석 (오답 노트)
             _buildWideStatCard(
               title: "현재 복습이 필요한 단어",
               subtitle: "오답 노트에 쌓인 단어 수입니다. 틈틈이 복습해주세요!",
@@ -146,6 +300,64 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
 
             const SizedBox(height: 40),
+
+            const Text(
+              "데이터 관리",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: OutlinedButton.icon(
+                onPressed: _recommendedLevel != "미응시" ? _resetLevelTest : null,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text(
+                  "레벨 테스트 초기화",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                  side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: OutlinedButton.icon(
+                onPressed: _resetAllRecords,
+                icon: const Icon(Icons.delete_forever_rounded),
+                label: const Text(
+                  "모든 학습 기록 초기화",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  backgroundColor: Colors.red[50],
+                  side: BorderSide(
+                    color: Colors.redAccent.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+
             Center(
               child: Text(
                 "꾸준함이 실력을 만듭니다!\n오늘도 파이팅하세요 🔥",
@@ -157,13 +369,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // ★ 변경: 카드의 높이가 늘어나도 텍스트가 위아래로 예쁘게 배치되도록 구조 최적화
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -186,8 +398,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween, // 위아래 간격을 균등하게 밀어냅니다.
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +423,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ],
           ),
           const SizedBox(height: 8),
-          // ★ 추가: 작은 폰(아이폰 SE 등)에서 글자가 길어져도 박스가 안 깨지도록 FittedBox 적용
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -230,7 +440,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // 직사각형 형태의 넓은 통계 카드 위젯
   Widget _buildWideStatCard({
     required String title,
     required String subtitle,
@@ -303,7 +512,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ],
           ),
           const SizedBox(height: 20),
-          // 프로그레스 바
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(

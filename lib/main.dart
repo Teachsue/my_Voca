@@ -150,6 +150,7 @@ class _HomePageState extends State<HomePage> {
 
                 Column(
                   children: [
+                    // 오늘의 단어 배너
                     GestureDetector(
                       onTap: () async {
                         await _startTodaysQuiz();
@@ -229,33 +230,31 @@ class _HomePageState extends State<HomePage> {
 
                     const SizedBox(height: 16),
 
+                    // ★ 변경: 실력 진단 / 맞춤 학습 배너
                     GestureDetector(
                       onTap: () async {
-                        final String lastCompletedDate = cacheBox.get(
-                          'level_test_completed_date',
-                          defaultValue: '',
-                        );
-
-                        if (todayStr == lastCompletedDate) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "레벨 테스트는 하루에 한 번만 참여할 수 있어요! 내일 다시 도전해 보세요. ⏳",
+                        // 결과가 이미 있다면 해당 레벨 단어장으로 직행!
+                        if (recommendedLevel != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DaySelectionPage(
+                                category: 'TOEIC', // 현재 레벨 테스트는 TOEIC 기준
+                                level: recommendedLevel,
                               ),
-                              duration: Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
                             ),
                           );
-                          return;
                         }
-
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LevelTestPage(),
-                          ),
-                        );
-                        _refresh();
+                        // 결과가 없다면 레벨 테스트 응시 창으로 이동
+                        else {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LevelTestPage(),
+                            ),
+                          );
+                          _refresh(); // 다녀오면 결과 갱신
+                        }
                       },
                       child: Container(
                         width: double.infinity,
@@ -282,8 +281,10 @@ class _HomePageState extends State<HomePage> {
                                 color: Colors.indigo.withOpacity(0.06),
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Icon(
-                                Icons.psychology_alt_rounded,
+                              child: Icon(
+                                recommendedLevel != null
+                                    ? Icons.auto_awesome_rounded
+                                    : Icons.psychology_alt_rounded,
                                 color: Colors.indigo,
                                 size: 26,
                               ),
@@ -306,7 +307,7 @@ class _HomePageState extends State<HomePage> {
                                   const SizedBox(height: 4),
                                   Text(
                                     recommendedLevel != null
-                                        ? "💡 추천 레벨: TOEIC $recommendedLevel"
+                                        ? "💡 추천 레벨: TOEIC $recommendedLevel\n터치하면 해당 단어장으로 이동해요!"
                                         : "딱 3분! 실력 진단 테스트 시작하기",
                                     style: TextStyle(
                                       fontSize: 13,
@@ -314,8 +315,9 @@ class _HomePageState extends State<HomePage> {
                                           ? Colors.indigo[600]
                                           : Colors.grey[500],
                                       fontWeight: recommendedLevel != null
-                                          ? FontWeight.bold
+                                          ? FontWeight.w600
                                           : FontWeight.w500,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ],
@@ -388,7 +390,7 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     _buildMenuCard(
-                      title: "학습 통계",
+                      title: "학습 통계 및 설정",
                       subtitle: "내 실력 한눈에 보기",
                       icon: Icons.bar_chart_rounded,
                       color: Colors.purpleAccent,
@@ -529,7 +531,6 @@ class _HomePageState extends State<HomePage> {
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  // ★ 핵심: 번거로운 팝업을 거치지 않고 곧바로 DaySelectionPage로 보냅니다!
                   Navigator.push(
                     context,
                     MaterialPageRoute(
