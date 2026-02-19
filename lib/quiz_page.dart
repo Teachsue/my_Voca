@@ -53,11 +53,22 @@ class _QuizPageState extends State<QuizPage> {
       final allWords = wordBox.values.toList();
 
       _quizList = [];
+      // [추가] 불러올 때도 중복 체크를 위한 Set (정규화된 철자 저장)
+      final Set<String> seenNormalized = {};
+
       for (String spelling in savedSpellings) {
+        final normalized = spelling.trim().toLowerCase();
+        if (seenNormalized.contains(normalized)) continue; // 이미 처리된 단어는 건너뜀
+
         try {
-          final word = allWords.firstWhere((w) => w.spelling == spelling);
+          final word = allWords.firstWhere(
+            (w) => w.spelling.trim().toLowerCase() == normalized,
+          );
           _quizList.add(word);
-        } catch (e) {}
+          seenNormalized.add(normalized);
+        } catch (e) {
+          // 일치하는 단어가 없는 경우 무시
+        }
       }
 
       if (mounted) {
@@ -98,21 +109,22 @@ class _QuizPageState extends State<QuizPage> {
     final box = Hive.box<Word>('words');
     final allWords = box.values.toList();
 
-    // [수정됨] Map을 사용하여 spelling 기준 중복 제거
+    // [수정] 정규화된 철자를 키로 사용하는 Map
     final Map<String, Word> uniqueQuizMap = {};
 
     for (var word in allWords) {
       if (word.category == widget.category &&
           word.level == widget.level &&
           word.type == 'Quiz') {
-        // 이미 해당 철자가 Map에 들어있지 않은 경우에만 추가 (첫 번째 단어만 로드)
-        uniqueQuizMap.putIfAbsent(word.spelling, () => word);
+        final key = word.spelling.trim().toLowerCase();
+        // 가장 먼저 발견된 단어 하나만 유지
+        if (!uniqueQuizMap.containsKey(key)) {
+          uniqueQuizMap[key] = word;
+        }
       }
     }
 
-    // 중복이 제거된 리스트 생성
     List<Word> filteredList = uniqueQuizMap.values.toList();
-
     filteredList.shuffle();
 
     if (filteredList.length > widget.questionCount) {
@@ -133,23 +145,27 @@ class _QuizPageState extends State<QuizPage> {
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
 
-    // [수정됨] 오답 후보군 및 의미 데이터 로드 시에도 중복 제거
+    // [수정] 모든 Word 타입 데이터도 중복 제거 후 리스트화
     final Map<String, Word> uniqueCandidateMap = {};
     for (var w in box.values) {
       if (w.type == 'Word') {
-        uniqueCandidateMap.putIfAbsent(w.spelling, () => w);
+        final key = w.spelling.trim().toLowerCase();
+        if (!uniqueCandidateMap.containsKey(key)) {
+          uniqueCandidateMap[key] = w;
+        }
       }
     }
 
     final allWordCandidates = uniqueCandidateMap.values.toList();
+    _quizData = []; // 기존 데이터 초기화 (중요)
 
     for (var targetQuiz in _quizList) {
       String correctAnswer = targetQuiz.correctAnswer ?? "";
-
       List<String> options = [];
 
       if (targetQuiz.options != null && targetQuiz.options!.isNotEmpty) {
-        options = List.from(targetQuiz.options!);
+        // [추가] 옵션 자체에 중복이 있을 경우를 대비한 처리
+        options = targetQuiz.options!.map((o) => o.trim()).toSet().toList();
         options.shuffle();
       } else {
         options = [correctAnswer];
@@ -159,9 +175,9 @@ class _QuizPageState extends State<QuizPage> {
 
       for (String option in options) {
         try {
-          // 중복이 제거된 후보군에서 검색
+          final normalizedOption = option.trim().toLowerCase();
           final matchingWord = allWordCandidates.firstWhere(
-            (w) => w.spelling.toLowerCase() == option.toLowerCase(),
+            (w) => w.spelling.trim().toLowerCase() == normalizedOption,
           );
           optionMeanings[option] = matchingWord.meaning;
         } catch (e) {

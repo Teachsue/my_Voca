@@ -14,14 +14,12 @@ class StudyPage extends StatefulWidget {
 }
 
 class _StudyPageState extends State<StudyPage> {
-  // 전체 데이터와 현재 페이지 데이터를 분리합니다.
-  List<Word> _allWords = []; // 불러온 전체 단어
-  List<Word> _currentWords = []; // 현재 페이지에 보여줄 단어
+  List<Word> _allWords = [];
+  List<Word> _currentWords = [];
 
-  int _currentPage = 1; // 현재 페이지 번호
-  final int _itemsPerPage = 20; // 페이지당 단어 수
+  int _currentPage = 1;
+  final int _itemsPerPage = 20;
 
-  // ★ 1. 스크롤 제어를 위한 컨트롤러 선언
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -30,28 +28,76 @@ class _StudyPageState extends State<StudyPage> {
     _loadData();
   }
 
-  // ★ 2. 화면이 종료될 때 컨트롤러 해제 (메모리 관리)
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
 
+  // ★ 추가: 페이지 이동 다이얼로그 함수
+  void _showJumpToPageDialog() {
+    final int totalPages = (_allWords.length / _itemsPerPage).ceil();
+    final TextEditingController pageEditingController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("페이지 이동"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("이동할 페이지를 입력하세요. (1 ~ $totalPages)"),
+              TextField(
+                controller: pageEditingController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: "페이지 번호"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("취소"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final int? targetPage = int.tryParse(
+                  pageEditingController.text,
+                );
+                if (targetPage != null &&
+                    targetPage >= 1 &&
+                    targetPage <= totalPages) {
+                  _changePage(targetPage); // 기존에 만든 페이지 변경 함수 호출
+                  Navigator.pop(context);
+                } else {
+                  // 범위를 벗어난 경우 스낵바 알림
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("1에서 $totalPages 사이의 숫자를 입력해주세요.")),
+                  );
+                }
+              },
+              child: const Text("이동"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _loadData() {
     final box = Hive.box<Word>('words');
 
-    // 1. 조건에 맞는 모든 단어를 가져옵니다.
     _allWords = box.values.where((word) {
       return word.category == widget.category &&
           word.level == widget.level &&
           word.type == 'Word';
     }).toList();
 
-    // 2. 첫 페이지 데이터를 설정합니다.
     _updatePageData();
   }
 
-  // 현재 페이지에 맞는 데이터를 잘라내는 함수
   void _updatePageData() {
     if (_allWords.isEmpty) {
       _currentWords = [];
@@ -66,14 +112,12 @@ class _StudyPageState extends State<StudyPage> {
     });
   }
 
-  // 페이지 변경 함수
   void _changePage(int newPage) {
     setState(() {
       _currentPage = newPage;
       _updatePageData();
     });
 
-    // ★ 4. 페이지가 바뀌면 스크롤을 맨 위(0)로 즉시 이동
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
@@ -87,14 +131,22 @@ class _StudyPageState extends State<StudyPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text("${widget.category} ${widget.level} 단어장"),
+        title: Text("${widget.category} ${widget.level}"), // 제목 간소화
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        // ★ 추가: AppBar 우측에 검색 아이콘 추가
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.find_in_page_outlined),
+            onPressed: _showJumpToPageDialog, // 다이얼로그 호출
+            tooltip: "페이지 이동",
+          ),
+          const SizedBox(width: 10),
+        ],
       ),
       body: Column(
         children: [
-          // 1. 상단 정보 (전체 개수 표시)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
             color: Colors.white,
@@ -106,12 +158,10 @@ class _StudyPageState extends State<StudyPage> {
             ),
           ),
 
-          // 2. 단어 리스트
           Expanded(
             child: _currentWords.isEmpty
                 ? const Center(child: Text("등록된 단어가 없습니다."))
                 : ListView.separated(
-                    // ★ 3. 리스트뷰에 컨트롤러 연결
                     controller: _scrollController,
                     padding: const EdgeInsets.all(20),
                     itemCount: _currentWords.length,
@@ -137,7 +187,6 @@ class _StudyPageState extends State<StudyPage> {
                         ),
                         child: Row(
                           children: [
-                            // 번호
                             Container(
                               width: 35,
                               height: 35,
@@ -155,7 +204,6 @@ class _StudyPageState extends State<StudyPage> {
                               ),
                             ),
                             const SizedBox(width: 15),
-                            // 단어와 뜻
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +233,6 @@ class _StudyPageState extends State<StudyPage> {
                   ),
           ),
 
-          // 3. 하단 페이지네이션 컨트롤러
           Container(
             padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
             decoration: BoxDecoration(
@@ -201,7 +248,6 @@ class _StudyPageState extends State<StudyPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // 이전 페이지 버튼
                 ElevatedButton(
                   onPressed: _currentPage > 1
                       ? () => _changePage(_currentPage - 1)
@@ -218,16 +264,19 @@ class _StudyPageState extends State<StudyPage> {
                   child: const Icon(Icons.chevron_left),
                 ),
 
-                // 페이지 번호 표시
-                Text(
-                  "$_currentPage / $totalPages",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                // ★ 추가 기능: 하단 페이지 번호를 눌러도 이동 다이얼로그가 뜨게 하면 더 편리합니다.
+                GestureDetector(
+                  onTap: _showJumpToPageDialog,
+                  child: Text(
+                    "$_currentPage / $totalPages",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline, // 클릭 가능하다는 표시
+                    ),
                   ),
                 ),
 
-                // 다음 페이지 버튼
                 ElevatedButton(
                   onPressed: _currentPage < totalPages
                       ? () => _changePage(_currentPage + 1)
