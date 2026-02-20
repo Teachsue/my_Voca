@@ -1,3 +1,4 @@
+import 'dart:math'; // ★ 랜덤 셔플을 위해 추가
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
@@ -43,9 +44,15 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     }
 
     List<Word> finalPool = uniqueMap.values.toList();
-    finalPool.sort(
-      (a, b) => a.spelling.toLowerCase().compareTo(b.spelling.toLowerCase()),
-    );
+
+    // ==========================================
+    // ★ 핵심 수정: 알파벳 정렬을 지우고 '고정된 랜덤'으로 섞기
+    // ==========================================
+    // 카테고리와 레벨 이름(예: "TOEIC500")을 합친 텍스트의 고유 번호(hashCode)를 추출합니다.
+    // 이 번호를 랜덤의 '시드(Seed)'로 사용하면,
+    // 알파벳 순서가 마구잡이로 섞이면서도 "항상 100% 똑같은 순서"를 영구적으로 유지합니다!
+    int seed = (widget.category + widget.level).hashCode;
+    finalPool.shuffle(Random(seed));
 
     _dayChunks = [];
     for (var i = 0; i < finalPool.length; i += _wordsPerDay) {
@@ -58,13 +65,11 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     setState(() {});
   }
 
-  // ★ 변경: 비정상적인 캐시(index가 0)일 경우 무시하고 문제 수 팝업 노출
   void _checkSavedQuizAndStart() {
     final cacheBox = Hive.box('cache');
     final String cacheKey = "quiz_match_${widget.category}_${widget.level}";
     final savedData = cacheBox.get(cacheKey);
 
-    // 기록이 있으면서, 최소 1문제 이상(index > 0) 풀었을 때만 이어풀기로 보냄
     if (savedData != null && (savedData['index'] ?? 0) > 0) {
       Navigator.push(
         context,
@@ -77,7 +82,6 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
         ),
       );
     } else {
-      // 찌꺼기 기록 삭제 후 문제 수 선택 창 띄우기
       cacheBox.delete(cacheKey);
       _showQuestionCountDialog();
     }
@@ -186,7 +190,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      "랜덤 퀴즈",
+                      "전체 퀴즈",
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
