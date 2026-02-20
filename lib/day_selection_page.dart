@@ -1,4 +1,4 @@
-import 'dart:math'; // ★ 랜덤 셔플을 위해 추가
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
@@ -45,12 +45,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
 
     List<Word> finalPool = uniqueMap.values.toList();
 
-    // ==========================================
-    // ★ 핵심 수정: 알파벳 정렬을 지우고 '고정된 랜덤'으로 섞기
-    // ==========================================
-    // 카테고리와 레벨 이름(예: "TOEIC500")을 합친 텍스트의 고유 번호(hashCode)를 추출합니다.
-    // 이 번호를 랜덤의 '시드(Seed)'로 사용하면,
-    // 알파벳 순서가 마구잡이로 섞이면서도 "항상 100% 똑같은 순서"를 영구적으로 유지합니다!
+    // 시드 값을 이용해 고정된 랜덤 순서로 섞기
     int seed = (widget.category + widget.level).hashCode;
     finalPool.shuffle(Random(seed));
 
@@ -60,6 +55,20 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
           ? i + _wordsPerDay
           : finalPool.length;
       _dayChunks.add(finalPool.sublist(i, end));
+    }
+    // ==========================================
+    // ★ 수정된 로직: 짜투리 단어 합치기 (10개 미만일 때만)
+    // ==========================================
+    // 청크가 2개 이상이고, 마지막 청크의 단어가 10개 미만일 때만 합칩니다.
+    if (_dayChunks.length > 1 && _dayChunks.last.length < 10) {
+      // 마지막 짜투리 DAY를 리스트에서 빼옵니다.
+      List<Word> leftoverChunk = _dayChunks.removeLast();
+
+      // 그 앞의 DAY(이제 마지막이 된 DAY)에 짜투리 단어들을 전부 더해줍니다.
+      List<Word> mergedChunk = List<Word>.from(_dayChunks.last);
+      mergedChunk.addAll(leftoverChunk);
+
+      _dayChunks[_dayChunks.length - 1] = mergedChunk;
     }
 
     setState(() {});
@@ -253,6 +262,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
                   ),
                   const SizedBox(height: 5),
                   Text(
+                    // ★ 이제 20 단어, 25 단어 등 유동적인 숫자가 예쁘게 표시됩니다.
                     "$wordCount 단어",
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
