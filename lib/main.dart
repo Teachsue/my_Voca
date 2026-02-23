@@ -13,7 +13,7 @@ import 'todays_word_list_page.dart';
 import 'level_test_page.dart';
 import 'day_selection_page.dart';
 import 'statistics_page.dart';
-import 'scrap_page.dart';
+import 'scrap_page.dart'; // ★ 나만의 단어장 import 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -205,8 +205,6 @@ class _HomePageState extends State<HomePage> {
     );
 
     String? recommendedLevel = cacheBox.get('user_recommended_level');
-
-    // ★ 화면 크기에 맞추기 위한 반응형 레이아웃
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenHeight < 750;
 
@@ -217,7 +215,6 @@ class _HomePageState extends State<HomePage> {
               ? const AlwaysScrollableScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           child: Padding(
-            // ★ 위아래 여백 축소
             padding: const EdgeInsets.symmetric(
               horizontal: 24.0,
               vertical: 15.0,
@@ -225,6 +222,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ★ 상단 헤더 영역 수정 (설정 아이콘 추가)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -251,40 +249,74 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.15),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
+                    Row(
+                      children: [
+                        // ★ 학습 통계 및 설정 버튼 (상단 우측으로 이동)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.15),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.calendar_month_rounded,
-                          color: Colors.indigo,
-                        ),
-                        onPressed: () async {
-                          // 캘린더 페이지도 갔다 오면 갱신되도록 await 추가 (선택 사항)
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CalendarPage(),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.settings_rounded, // 설정 느낌의 아이콘으로 변경
+                              color: Colors.blueGrey,
                             ),
-                          );
-                          _refresh();
-                        },
-                      ),
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const StatisticsPage(),
+                                ),
+                              );
+                              _refresh();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12), // 캘린더 버튼과의 간격
+                        // 캘린더 버튼
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.15),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.calendar_month_rounded,
+                              color: Colors.indigo,
+                            ),
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CalendarPage(),
+                                ),
+                              );
+                              _refresh();
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
 
-                // ★ 간격 축소
                 const SizedBox(height: 25),
 
                 Column(
@@ -292,13 +324,11 @@ class _HomePageState extends State<HomePage> {
                     // 오늘의 단어 배너
                     GestureDetector(
                       onTap: () async {
-                        // ★ 핵심 수정: 여기서 await를 붙여야 갔다 왔을 때 _refresh가 실행됩니다!
                         await _startTodaysQuiz();
                         _refresh();
                       },
                       child: Container(
                         width: double.infinity,
-                        // ★ 내부 패딩 축소
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -369,7 +399,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    // ★ 간격 축소
                     const SizedBox(height: 12),
 
                     // 실력 진단 / 맞춤 학습 배너
@@ -392,7 +421,6 @@ class _HomePageState extends State<HomePage> {
                       },
                       child: Container(
                         width: double.infinity,
-                        // ★ 세로 패딩 축소
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 16,
@@ -470,7 +498,6 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
 
-                // ★ 간격 축소
                 const SizedBox(height: 25),
                 const Text(
                   "Study Category",
@@ -480,17 +507,15 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.black87,
                   ),
                 ),
-                // ★ 간격 축소
                 const SizedBox(height: 12),
 
+                // ★ 완벽한 2x2 그리드 배열
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: 2,
-                  // ★ 그리드 간격 축소
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  // ★ 핵심: AspectRatio를 넓혀서 세로 높이를 확 줄임
                   childAspectRatio: 1.30,
                   children: [
                     _buildMenuCard(
@@ -529,25 +554,10 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     _buildMenuCard(
-                      title: "학습 통계 및 설정",
-                      subtitle: "내 실력 한눈에 보기",
-                      icon: Icons.bar_chart_rounded,
-                      color: Colors.purpleAccent,
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const StatisticsPage(),
-                          ),
-                        );
-                        _refresh();
-                      },
-                    ),
-                    _buildMenuCard(
                       title: "나만의 단어장",
                       subtitle: "저장한 단어 모아보기",
-                      icon: Icons.star_rounded, // 별 아이콘
-                      color: Colors.amber, // 노란색 테마
+                      icon: Icons.star_rounded,
+                      color: Colors.amber,
                       onTap: () async {
                         await Navigator.push(
                           context,
@@ -648,7 +658,6 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (!mounted) return;
-    // ★ 핵심 수정: Navigator.push 앞에 await를 추가했습니다.
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -656,8 +665,6 @@ class _HomePageState extends State<HomePage> {
             TodaysWordListPage(words: todaysWords, isCompleted: isCompleted),
       ),
     );
-    // 이제 push가 끝나고 돌아왔을 때(pop) 아래 코드가 실행되지 않고,
-    // onTap의 await _startTodaysQuiz()가 끝나고 나서야 onTap 안의 _refresh()가 실행됩니다.
   }
 
   Future<void> _showLevelDialog(String category, List<String> levels) async {

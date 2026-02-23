@@ -226,7 +226,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
-          "학습 통계 📊",
+          "학습 통계 및 설정 📊",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
