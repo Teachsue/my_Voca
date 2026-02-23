@@ -112,21 +112,22 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 2. 오답 화면 (저장 로직 없이 메인으로 돌아갑니다)
+  // 2. 오답 화면 (UI 완전 개편)
   Widget _buildWrongAnswerView(BuildContext context, int score) {
     return Column(
       children: [
+        // 1. 상단 점수 카드 (답답한 헤더 대신 플로팅 스타일로 깔끔하게)
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(30),
-          decoration: const BoxDecoration(
+          margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, 5),
+                color: Colors.redAccent.withOpacity(0.08), // 부드러운 붉은빛 그림자
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -134,78 +135,163 @@ class TodaysQuizResultPage extends StatelessWidget {
             children: [
               const Text(
                 "아쉬워요! 조금만 더 힘내세요 💪",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "$score / $totalCount",
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent,
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    "$score",
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  Text(
+                    " / $totalCount",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               Text(
-                "${wrongAnswers.length}개를 틀렸어요. 다시 도전해볼까요?",
+                "${wrongAnswers.length}개를 틀렸어요. 오답을 확인해보세요.",
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             ],
           ),
         ),
+
+        // 2. 오답 리스트 카드 (비교하기 쉽게 개선)
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: wrongAnswers.length,
             itemBuilder: (context, index) {
               final item = wrongAnswers[index];
               return Container(
-                margin: const EdgeInsets.only(bottom: 15),
+                margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.red.shade100),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Colors.red.shade400,
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.06), // 은은한 그림자
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 단어 스펠링 영역
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.edit_note_rounded,
+                          color: Colors.red.shade400,
+                          size: 26,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          item['spelling'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // 내가 쓴 답 vs 정답 비교 박스
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            item['spelling'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          // 오답 (가운데 정렬 + 취소선 적용)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "내가 쓴 답",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red.shade300,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "${item['userAnswer']}",
+                                  style: TextStyle(
+                                    color: Colors.red.shade400,
+                                    fontSize: 15,
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: Colors.red.shade400,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 5),
-                          Text(
-                            "내가 쓴 답: ${item['userAnswer']}",
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 13,
+                          // 화살표 아이콘
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                            ),
+                            child: Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.grey.shade400,
+                              size: 20,
                             ),
                           ),
-                          Text(
-                            "정답: ${item['correctAnswer']}",
-                            style: const TextStyle(
-                              color: Colors.green,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                          // 정답 (가운데 정렬 + 초록색 폰트)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "정답",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.green.shade600,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "${item['correctAnswer']}",
+                                  style: TextStyle(
+                                    color: Colors.green.shade700,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -217,14 +303,16 @@ class TodaysQuizResultPage extends StatelessWidget {
             },
           ),
         ),
+
+        // 3. 하단 버튼
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
           child: SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                // 저장 로직 없이 메인으로 돌아감 -> 배너는 여전히 파란색(미완료)
+                // 저장 로직 없이 메인으로 돌아감
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
               style: ElevatedButton.styleFrom(
@@ -233,7 +321,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 3,
+                elevation: 0, // 플랫하고 모던한 느낌을 위해 그림자 제거
               ),
               child: const Text(
                 "다시 도전하기",
