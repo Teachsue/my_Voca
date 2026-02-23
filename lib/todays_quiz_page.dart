@@ -208,12 +208,13 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
 
       if (!mounted) return;
 
+      // 퀴즈 페이지가 끝나면 스스로를 지우고(Replacement) 결과창을 띄웁니다.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => TodaysQuizResultPage(
             wrongAnswers: _wrongAnswersList,
-            totalCount: _quizData.length,
+            totalCount: widget.words.length,
           ),
         ),
       );

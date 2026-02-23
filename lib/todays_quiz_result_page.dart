@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // 추가
-import 'package:intl/intl.dart'; // 추가
-import 'study_record_service.dart'; // 추가
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
+import 'study_record_service.dart';
 
 class TodaysQuizResultPage extends StatelessWidget {
   final List<Map<String, dynamic>> wrongAnswers;
   final int totalCount;
 
+  // ★ retryPage 변수는 이제 필요 없으므로 삭제했습니다!
   const TodaysQuizResultPage({
     super.key,
     required this.wrongAnswers,
@@ -28,7 +29,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 1. 만점 화면 (여기서만 '완료' 처리를 합니다)
+  // 1. 만점 화면 (변경 없음)
   Widget _buildPerfectView(BuildContext context) {
     return Center(
       child: Padding(
@@ -76,16 +77,12 @@ class TodaysQuizResultPage extends StatelessWidget {
               height: 56,
               child: ElevatedButton(
                 onPressed: () async {
-                  // ★ [핵심] 만점일 때만 완료 데이터 저장
                   final cacheBox = Hive.box('cache');
                   final String todayStr = DateFormat(
                     'yyyy-MM-dd',
                   ).format(DateTime.now());
 
-                  // 오늘 완료 여부 저장
                   cacheBox.put("today_completed_$todayStr", true);
-
-                  // 학습 기록 서비스에 완료 보고 (배너 색상 변경용)
                   await StudyRecordService.markTodayAsDone();
 
                   if (context.mounted) {
@@ -112,11 +109,11 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 2. 오답 화면 (UI 완전 개편)
+  // 2. 오답 화면 (하단 버튼 동작 수정)
   Widget _buildWrongAnswerView(BuildContext context, int score) {
     return Column(
       children: [
-        // 1. 상단 점수 카드 (답답한 헤더 대신 플로팅 스타일로 깔끔하게)
+        // 상단 점수 카드
         Container(
           margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
           padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
@@ -125,7 +122,7 @@ class TodaysQuizResultPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.redAccent.withOpacity(0.08), // 부드러운 붉은빛 그림자
+                color: Colors.redAccent.withOpacity(0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -174,7 +171,7 @@ class TodaysQuizResultPage extends StatelessWidget {
           ),
         ),
 
-        // 2. 오답 리스트 카드 (비교하기 쉽게 개선)
+        // 오답 리스트 카드
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -189,7 +186,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.06), // 은은한 그림자
+                      color: Colors.grey.withOpacity(0.06),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -198,7 +195,6 @@ class TodaysQuizResultPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 단어 스펠링 영역
                     Row(
                       children: [
                         Icon(
@@ -218,7 +214,6 @@ class TodaysQuizResultPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // 내가 쓴 답 vs 정답 비교 박스
                     Container(
                       padding: const EdgeInsets.symmetric(
                         vertical: 15,
@@ -230,7 +225,6 @@ class TodaysQuizResultPage extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          // 오답 (가운데 정렬 + 취소선 적용)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -257,7 +251,6 @@ class TodaysQuizResultPage extends StatelessWidget {
                               ],
                             ),
                           ),
-                          // 화살표 아이콘
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8.0,
@@ -268,7 +261,6 @@ class TodaysQuizResultPage extends StatelessWidget {
                               size: 20,
                             ),
                           ),
-                          // 정답 (가운데 정렬 + 초록색 폰트)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -304,7 +296,7 @@ class TodaysQuizResultPage extends StatelessWidget {
           ),
         ),
 
-        // 3. 하단 버튼
+        // 하단 복귀 버튼
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
           child: SizedBox(
@@ -312,19 +304,20 @@ class TodaysQuizResultPage extends StatelessWidget {
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                // 저장 로직 없이 메인으로 돌아감
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                // ★ 마법의 로직: 현재 화면(결과창)을 닫으면,
+                // 이전에 보고 있던 StudyPage(단어 리스트)가 자연스럽게 나타납니다!
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Colors.blueGrey.shade600, // 복습하러 가는 차분한 톤
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 0, // 플랫하고 모던한 느낌을 위해 그림자 제거
+                elevation: 0,
               ),
               child: const Text(
-                "다시 도전하기",
+                "단어 목록 다시 보기",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
