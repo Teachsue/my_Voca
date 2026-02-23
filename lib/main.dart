@@ -206,7 +206,6 @@ class _HomePageState extends State<HomePage> {
     String? recommendedLevel = cacheBox.get('user_recommended_level');
 
     // ★ 화면 크기에 맞추기 위한 반응형 레이아웃
-    // 화면이 유독 작은 폰이라면 스크롤을 허용하고, 일반 폰이면 한 화면에 꽉 차게 합니다.
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenHeight < 750;
 
@@ -234,7 +233,7 @@ class _HomePageState extends State<HomePage> {
                         Text(
                           "안녕하세요! 👋",
                           style: TextStyle(
-                            fontSize: 14, // 폰트 미세 조정
+                            fontSize: 14,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
@@ -243,7 +242,7 @@ class _HomePageState extends State<HomePage> {
                         const Text(
                           "오늘도 열공해볼까요?",
                           style: TextStyle(
-                            fontSize: 22, // 폰트 미세 조정
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                             letterSpacing: -0.5,
@@ -269,18 +268,22 @@ class _HomePageState extends State<HomePage> {
                           Icons.calendar_month_rounded,
                           color: Colors.indigo,
                         ),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CalendarPage(),
-                          ),
-                        ),
+                        onPressed: () async {
+                          // 캘린더 페이지도 갔다 오면 갱신되도록 await 추가 (선택 사항)
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CalendarPage(),
+                            ),
+                          );
+                          _refresh();
+                        },
                       ),
                     ),
                   ],
                 ),
 
-                // ★ 간격 축소 (35 -> 25)
+                // ★ 간격 축소
                 const SizedBox(height: 25),
 
                 Column(
@@ -288,12 +291,13 @@ class _HomePageState extends State<HomePage> {
                     // 오늘의 단어 배너
                     GestureDetector(
                       onTap: () async {
+                        // ★ 핵심 수정: 여기서 await를 붙여야 갔다 왔을 때 _refresh가 실행됩니다!
                         await _startTodaysQuiz();
                         _refresh();
                       },
                       child: Container(
                         width: double.infinity,
-                        // ★ 내부 패딩 축소 (24 -> 20)
+                        // ★ 내부 패딩 축소
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -327,7 +331,7 @@ class _HomePageState extends State<HomePage> {
                                     isCompleted ? "오늘의 학습 완료! ✅" : "오늘의 영단어 🔥",
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 18, // 폰트 축소
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -338,7 +342,7 @@ class _HomePageState extends State<HomePage> {
                                         : "매일 10개씩 꾸준히!\n지금 바로 시작하세요.",
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
-                                      fontSize: 13, // 폰트 축소
+                                      fontSize: 13,
                                       height: 1.4,
                                     ),
                                   ),
@@ -364,14 +368,14 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    // ★ 간격 축소 (16 -> 12)
+                    // ★ 간격 축소
                     const SizedBox(height: 12),
 
                     // 실력 진단 / 맞춤 학습 배너
                     GestureDetector(
                       onTap: () async {
                         if (recommendedLevel != null) {
-                          Navigator.push(
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DaySelectionPage(
@@ -380,6 +384,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           );
+                          _refresh();
                         } else {
                           _showLevelTestGuide(context);
                         }
@@ -464,27 +469,27 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
 
-                // ★ 간격 축소 (35 -> 25)
+                // ★ 간격 축소
                 const SizedBox(height: 25),
                 const Text(
                   "Study Category",
                   style: TextStyle(
-                    fontSize: 16, // 폰트 축소
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                // ★ 간격 축소 (16 -> 12)
+                // ★ 간격 축소
                 const SizedBox(height: 12),
 
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: 2,
-                  // ★ 그리드 간격 축소 (16 -> 12)
+                  // ★ 그리드 간격 축소
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  // ★ 핵심: AspectRatio를 넓혀서(1.05 -> 1.30) 세로 높이를 확 줄임
+                  // ★ 핵심: AspectRatio를 넓혀서 세로 높이를 확 줄임
                   childAspectRatio: 1.30,
                   children: [
                     _buildMenuCard(
@@ -559,7 +564,7 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20), // 테두리 곡률 미세 축소
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.06),
@@ -573,25 +578,22 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12), // 패딩 축소
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 26), // 아이콘 크기 축소
+              child: Icon(icon, color: color, size: 26),
             ),
             const SizedBox(height: 10),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ), // 폰트 축소
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]), // 폰트 축소
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -630,13 +632,16 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (!mounted) return;
-    Navigator.push(
+    // ★ 핵심 수정: Navigator.push 앞에 await를 추가했습니다.
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
             TodaysWordListPage(words: todaysWords, isCompleted: isCompleted),
       ),
     );
+    // 이제 push가 끝나고 돌아왔을 때(pop) 아래 코드가 실행되지 않고,
+    // onTap의 await _startTodaysQuiz()가 끝나고 나서야 onTap 안의 _refresh()가 실행됩니다.
   }
 
   Future<void> _showLevelDialog(String category, List<String> levels) async {
