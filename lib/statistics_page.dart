@@ -141,7 +141,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ],
           ),
           content: const Text(
-            "학습한 단어장, 오답 노트, 오늘의 퀴즈 완료 현황, 레벨 테스트 등 모든 개인 학습 데이터가 영구적으로 삭제됩니다.\n\n정말 처음부터 다시 시작하시겠습니까?",
+            "학습한 단어장, 오답 노트, 나만의 단어장, 오늘의 퀴즈 완료 현황, 레벨 테스트 등 모든 개인 학습 데이터가 영구적으로 삭제됩니다.\n\n정말 처음부터 다시 시작하시겠습니까?",
             style: TextStyle(height: 1.5),
           ),
           actions: [
@@ -157,12 +157,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // 1. 오답 노트 비우기
                 if (Hive.isBoxOpen('wrong_answers')) {
                   await Hive.box<Word>('wrong_answers').clear();
                 }
 
+                // 2. 캐시 데이터 비우기 (학습 기록, 레벨테스트 등)
                 await Hive.box('cache').clear();
 
+                // 3. 캘린더 학습 기록 비우기
                 try {
                   if (Hive.isBoxOpen('study_records')) {
                     await Hive.box('study_records').clear();
@@ -172,6 +175,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   }
                 } catch (e) {
                   print("캘린더 데이터 초기화 실패: $e");
+                }
+
+                // ★ 4. 나만의 단어장(북마크) 별표 떼기 로직 추가 ★
+                final wordBox = Hive.box<Word>('words');
+                for (var word in wordBox.values) {
+                  if (word.isScrap) {
+                    word.isScrap = false; // 스크랩 해제
+                    word.save(); // DB에 변경 사항 저장
+                  }
                 }
 
                 setState(() {
@@ -186,7 +198,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text("모든 학습 기록 및 캘린더가 깔끔하게 초기화되었습니다! 🧹"),
+                    content: Text("모든 학습 기록 및 나만의 단어장이 깔끔하게 초기화되었습니다! 🧹"),
                     behavior: SnackBarBehavior.floating,
                     backgroundColor: Colors.black87,
                   ),
