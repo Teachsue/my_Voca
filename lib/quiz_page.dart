@@ -255,31 +255,56 @@ class _QuizPageState extends State<QuizPage> {
     final box = Hive.box<Word>('words');
     final allWords = box.values.where((w) => w.type == 'Word').toList();
     _quizData = [];
+    final random = Random();
 
     for (var word in _quizList) {
-      String correctAnswer = word.meaning;
-      List<Word> distractorsPool = allWords
-          .where(
-            (w) => w.meaning != correctAnswer && w.spelling != word.spelling,
-          )
-          .toList();
-      distractorsPool.shuffle();
-      List<Word> selectedDistractors = distractorsPool.take(3).toList();
+      bool isSpellingToMeaning = random.nextBool();
+      String question;
+      String correctAnswer;
+      Map<String, String> answerToInfo = {};
 
-      Map<String, String> meaningToSpelling = {correctAnswer: word.spelling};
-      for (var d in selectedDistractors) {
-        meaningToSpelling[d.meaning] = d.spelling;
+      if (isSpellingToMeaning) {
+        question = word.spelling;
+        correctAnswer = word.meaning;
+
+        List<Word> distractorsPool = allWords
+            .where((w) =>
+                w.meaning != correctAnswer && w.spelling != word.spelling)
+            .toList();
+        distractorsPool.shuffle();
+        List<Word> selectedDistractors = distractorsPool.take(3).toList();
+
+        answerToInfo[correctAnswer] = word.spelling;
+        for (var d in selectedDistractors) {
+          answerToInfo[d.meaning] = d.spelling;
+        }
+      } else {
+        question = word.meaning;
+        correctAnswer = word.spelling;
+
+        List<Word> distractorsPool = allWords
+            .where((w) =>
+                w.spelling != correctAnswer && w.meaning != word.meaning)
+            .toList();
+        distractorsPool.shuffle();
+        List<Word> selectedDistractors = distractorsPool.take(3).toList();
+
+        answerToInfo[correctAnswer] = word.meaning;
+        for (var d in selectedDistractors) {
+          answerToInfo[d.spelling] = d.meaning;
+        }
       }
 
-      List<String> options = meaningToSpelling.keys.toList();
+      List<String> options = answerToInfo.keys.toList();
       options.shuffle();
 
       _quizData.add({
-        'question': word.spelling,
+        'question': question,
         'correctAnswer': correctAnswer,
         'options': options,
-        'meaningToSpelling': meaningToSpelling,
+        'answerToInfo': answerToInfo,
         'word': word,
+        'isSpellingToMeaning': isSpellingToMeaning,
       });
     }
   }
@@ -296,7 +321,7 @@ class _QuizPageState extends State<QuizPage> {
         List<String> learnedWords = List<String>.from(
           cacheBox.get('learned_words', defaultValue: []),
         );
-        String spelling = currentQuestion['question'];
+        String spelling = (currentQuestion['word'] as Word).spelling;
 
         if (!learnedWords.contains(spelling)) {
           learnedWords.add(spelling);
@@ -330,7 +355,7 @@ class _QuizPageState extends State<QuizPage> {
 
     if (!correct) {
       _wrongAnswersList.add({
-        'spelling': currentQuestion['question'],
+        'spelling': (currentQuestion['word'] as Word).spelling,
         'userAnswer': selectedAnswer,
         'correctAnswer': currentQuestion['correctAnswer'],
       });
@@ -396,15 +421,16 @@ class _QuizPageState extends State<QuizPage> {
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
-    final Map<dynamic, dynamic> rawMap =
-        currentQuestion['meaningToSpelling'] ?? {};
-    final Map<String, String> meaningToSpelling = rawMap.map(
+    final Map<dynamic, dynamic> rawMap = currentQuestion['answerToInfo'] ?? {};
+    final Map<String, String> answerToInfo = rawMap.map(
       (k, v) => MapEntry(k.toString(), v.toString()),
     );
+    final bool isSpellingToMeaning =
+        currentQuestion['isSpellingToMeaning'] ?? true;
 
     String appBarTitle = widget.dayNumber != null
-        ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizList.length})"
-        : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizList.length})";
+        ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizData.length})"
+        : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizData.length})";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -469,14 +495,23 @@ class _QuizPageState extends State<QuizPage> {
                   ),
                 ],
               ),
-              child: Text(
-                currentQuestion['question'],
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
+              child: Column(
+                children: [
+                  Text(
+                    isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요",
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    currentQuestion['question'],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isSpellingToMeaning ? 40 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 30),
@@ -488,10 +523,8 @@ class _QuizPageState extends State<QuizPage> {
               Color borderCol = Colors.grey[300]!;
               Color textColor = Colors.black87;
 
-              String originalSpelling = meaningToSpelling[option] ?? "";
-              String buttonText = _isChecked
-                  ? "$option\n($originalSpelling)"
-                  : option;
+              String info = answerToInfo[option] ?? "";
+              String buttonText = _isChecked ? "$option\n($info)" : option;
 
               if (_isChecked) {
                 if (isCorrectOption) {

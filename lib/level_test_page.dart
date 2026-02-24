@@ -111,29 +111,53 @@ class _LevelTestPageState extends State<LevelTestPage> {
     }
 
     _testData = [];
+    final random = Random();
     for (var word in testPool) {
-      String correctAnswer = word.meaning;
+      bool isSpellingToMeaning = random.nextBool();
+      String question;
+      String correctAnswer;
+      Map<String, String> answerToInfo = {};
 
-      List<Word> distractors = allWords
-          .where((w) => w.meaning != correctAnswer)
-          .toList();
-      distractors.shuffle();
-      List<Word> selectedDistractors = distractors.take(3).toList();
+      if (isSpellingToMeaning) {
+        question = word.spelling;
+        correctAnswer = word.meaning;
 
-      Map<String, String> meaningToSpelling = {correctAnswer: word.spelling};
-      for (var d in selectedDistractors) {
-        meaningToSpelling[d.meaning] = d.spelling;
+        List<Word> distractors = allWords
+            .where((w) => w.meaning != correctAnswer)
+            .toList();
+        distractors.shuffle();
+        List<Word> selectedDistractors = distractors.take(3).toList();
+
+        answerToInfo[correctAnswer] = word.spelling;
+        for (var d in selectedDistractors) {
+          answerToInfo[d.meaning] = d.spelling;
+        }
+      } else {
+        question = word.meaning;
+        correctAnswer = word.spelling;
+
+        List<Word> distractors = allWords
+            .where((w) => w.spelling != correctAnswer)
+            .toList();
+        distractors.shuffle();
+        List<Word> selectedDistractors = distractors.take(3).toList();
+
+        answerToInfo[correctAnswer] = word.meaning;
+        for (var d in selectedDistractors) {
+          answerToInfo[d.spelling] = d.meaning;
+        }
       }
 
-      List<String> options = meaningToSpelling.keys.toList();
+      List<String> options = answerToInfo.keys.toList();
       options.shuffle();
 
       _testData.add({
-        'question': word.spelling,
+        'question': question,
         'correctAnswer': correctAnswer,
         'options': options,
-        'meaningToSpelling': meaningToSpelling,
+        'answerToInfo': answerToInfo,
         'level': word.level,
+        'isSpellingToMeaning': isSpellingToMeaning,
       });
     }
 
@@ -281,11 +305,12 @@ class _LevelTestPageState extends State<LevelTestPage> {
 
     final currentQuestion = _testData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
-    final Map<dynamic, dynamic> rawMap =
-        currentQuestion['meaningToSpelling'] ?? {};
-    final Map<String, String> meaningToSpelling = rawMap.map(
+    final Map<dynamic, dynamic> rawMap = currentQuestion['answerToInfo'] ?? {};
+    final Map<String, String> answerToInfo = rawMap.map(
       (k, v) => MapEntry(k.toString(), v.toString()),
     );
+    final bool isSpellingToMeaning =
+        currentQuestion['isSpellingToMeaning'] ?? true;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -347,14 +372,23 @@ class _LevelTestPageState extends State<LevelTestPage> {
                   ),
                 ],
               ),
-              child: Text(
-                currentQuestion['question'],
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
+              child: Column(
+                children: [
+                  Text(
+                    isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요",
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    currentQuestion['question'],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isSpellingToMeaning ? 40 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 30),
@@ -400,7 +434,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                     ),
                     child: Text(
                       _isChecked
-                          ? "$option\n(${meaningToSpelling[option]})"
+                          ? "$option\n(${answerToInfo[option]})"
                           : option,
                       textAlign: TextAlign.center,
                       style: TextStyle(

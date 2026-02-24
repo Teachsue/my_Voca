@@ -104,54 +104,87 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
         .where((w) => w.type == 'Word')
         .toList();
 
-    // ★ [수정 핵심] 오늘 날짜를 숫자로 바꿔서 '고정된 랜덤 시드'로 사용합니다.
-    // 예: 2026-02-17 -> 20260217
     String dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
     int dateSeed = int.parse(dateStr);
-    Random randomSeed = Random(dateSeed); // 고정된 시드값 생성
+    Random randomSeed = Random(dateSeed);
 
-    // 원본 리스트 복사
     List<Word> shuffledWords = List<Word>.from(widget.words);
-
-    // ★ shuffle 할 때 생성한 randomSeed를 넣어줍니다.
-    // 오늘 하루 동안은 언제 실행해도 결과가 똑같습니다.
     shuffledWords.shuffle(randomSeed);
 
     for (var targetWord in shuffledWords) {
-      String correctAnswer = targetWord.meaning;
+      bool isSpellingToMeaning = randomSeed.nextBool();
+      String question;
+      String correctAnswer;
+      Map<String, String> optionInfos = {};
+      List<String> options = [];
 
-      List<String> distractors = allWordCandidates
-          .where((w) => w.meaning != correctAnswer)
-          .map((w) => w.meaning)
-          .toList();
+      if (isSpellingToMeaning) {
+        question = targetWord.spelling;
+        correctAnswer = targetWord.meaning;
 
-      // 보기(distractors)도 섞을 때 동일한 시드를 쓰면 보기 순서도 고정됩니다.
-      distractors.shuffle(randomSeed);
-      List<String> options = distractors.take(3).toList();
-      options.add(correctAnswer);
-      options.shuffle(randomSeed);
+        List<String> distractors = allWordCandidates
+            .where((w) => w.meaning != correctAnswer)
+            .map((w) => w.meaning)
+            .toSet() // 중복 제거
+            .toList();
 
-      Map<String, String> optionSpellings = {};
-      optionSpellings[correctAnswer] = targetWord.spelling;
+        distractors.shuffle(randomSeed);
+        options = distractors.take(3).toList();
+        options.add(correctAnswer);
+        options.shuffle(randomSeed);
 
-      for (String option in options) {
-        if (option == correctAnswer) continue;
-        try {
-          final matchingWord = allWordCandidates.firstWhere(
-            (w) => w.meaning == option,
-          );
-          optionSpellings[option] = matchingWord.spelling;
-        } catch (e) {
-          optionSpellings[option] = "";
+        for (String opt in options) {
+          if (opt == correctAnswer) {
+            optionInfos[opt] = targetWord.spelling;
+          } else {
+            try {
+              final matchingWord = allWordCandidates.firstWhere(
+                (w) => w.meaning == opt,
+              );
+              optionInfos[opt] = matchingWord.spelling;
+            } catch (e) {
+              optionInfos[opt] = "";
+            }
+          }
+        }
+      } else {
+        question = targetWord.meaning;
+        correctAnswer = targetWord.spelling;
+
+        List<String> distractors = allWordCandidates
+            .where((w) => w.spelling != correctAnswer)
+            .map((w) => w.spelling)
+            .toSet() // 중복 제거
+            .toList();
+
+        distractors.shuffle(randomSeed);
+        options = distractors.take(3).toList();
+        options.add(correctAnswer);
+        options.shuffle(randomSeed);
+
+        for (String opt in options) {
+          if (opt == correctAnswer) {
+            optionInfos[opt] = targetWord.meaning;
+          } else {
+            try {
+              final matchingWord = allWordCandidates.firstWhere(
+                (w) => w.spelling == opt,
+              );
+              optionInfos[opt] = matchingWord.meaning;
+            } catch (e) {
+              optionInfos[opt] = "";
+            }
+          }
         }
       }
 
       _quizData.add({
-        'spelling': targetWord.spelling,
+        'question': question,
         'correctAnswer': correctAnswer,
         'options': options,
         'word': targetWord,
-        'optionSpellings': optionSpellings,
+        'optionInfos': optionInfos,
+        'isSpellingToMeaning': isSpellingToMeaning,
       });
     }
   }
@@ -196,7 +229,7 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
 
     if (!correct) {
       _wrongAnswersList.add({
-        'spelling': currentQuestion['spelling'],
+        'spelling': (currentQuestion['word'] as Word).spelling,
         'userAnswer': selectedAnswer,
         'correctAnswer': currentQuestion['correctAnswer'],
       });
@@ -240,8 +273,9 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
-    final optionSpellings =
-        currentQuestion['optionSpellings'] as Map<String, String>;
+    final optionInfos = currentQuestion['optionInfos'] as Map<String, String>;
+    final bool isSpellingToMeaning =
+        currentQuestion['isSpellingToMeaning'] ?? true;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -323,15 +357,15 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "이 단어의 뜻은?",
+                      isSpellingToMeaning ? "이 단어의 뜻은?" : "이 뜻을 가진 단어는?",
                       style: TextStyle(color: Colors.grey[600], fontSize: 16),
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      currentQuestion['spelling'],
+                      currentQuestion['question'],
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 32,
+                      style: TextStyle(
+                        fontSize: isSpellingToMeaning ? 32 : 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.indigo,
                       ),
@@ -350,9 +384,9 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
                 String buttonText = option;
 
                 if (_isChecked) {
-                  String spelling = optionSpellings[option] ?? "";
-                  if (spelling.isNotEmpty) {
-                    buttonText += "\n($spelling)";
+                  String info = optionInfos[option] ?? "";
+                  if (info.isNotEmpty) {
+                    buttonText += "\n($info)";
                   }
 
                   if (option == currentQuestion['correctAnswer']) {
