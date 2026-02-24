@@ -259,6 +259,7 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
           builder: (context) => TodaysQuizResultPage(
             wrongAnswers: _wrongAnswersList,
             totalCount: widget.words.length,
+            isTodaysQuiz: true,
           ),
         ),
       );

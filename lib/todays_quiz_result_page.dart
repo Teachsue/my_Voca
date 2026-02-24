@@ -6,12 +6,13 @@ import 'study_record_service.dart';
 class TodaysQuizResultPage extends StatelessWidget {
   final List<Map<String, dynamic>> wrongAnswers;
   final int totalCount;
+  final bool isTodaysQuiz; // ★ 추가: 오늘의 퀴즈 여부 구분
 
-  // ★ retryPage 변수는 이제 필요 없으므로 삭제했습니다!
   const TodaysQuizResultPage({
     super.key,
     required this.wrongAnswers,
     required this.totalCount,
+    this.isTodaysQuiz = false, // 기본값은 false
   });
 
   @override
@@ -29,7 +30,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 1. 만점 화면 (변경 없음)
+  // 1. 만점 화면
   Widget _buildPerfectView(BuildContext context) {
     return Center(
       child: Padding(
@@ -66,10 +67,12 @@ class TodaysQuizResultPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              "틀린 문제가 하나도 없네요.\n오늘 학습 목표를 완벽하게 달성했어요!",
+            Text(
+              isTodaysQuiz
+                  ? "오늘 학습 목표를 완벽하게 달성했어요!\n출석 도장이 찍혔습니다."
+                  : "모든 문제를 맞히셨네요!\n정말 대단한 실력이에요.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+              style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
             ),
             const SizedBox(height: 60),
             SizedBox(
@@ -77,13 +80,13 @@ class TodaysQuizResultPage extends StatelessWidget {
               height: 56,
               child: ElevatedButton(
                 onPressed: () async {
-                  final cacheBox = Hive.box('cache');
-                  final String todayStr = DateFormat(
-                    'yyyy-MM-dd',
-                  ).format(DateTime.now());
-
-                  cacheBox.put("today_completed_$todayStr", true);
-                  await StudyRecordService.markTodayAsDone();
+                  // ★ 오늘의 퀴즈인 경우에만 출석 도장 로직 실행
+                  if (isTodaysQuiz) {
+                    final cacheBox = Hive.box('cache');
+                    final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    cacheBox.put("today_completed_$todayStr", true);
+                    await StudyRecordService.markTodayAsDone();
+                  }
 
                   if (context.mounted) {
                     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -97,9 +100,9 @@ class TodaysQuizResultPage extends StatelessWidget {
                   ),
                   elevation: 5,
                 ),
-                child: const Text(
-                  "학습 완료 (메인으로)",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                child: Text(
+                  isTodaysQuiz ? "학습 완료 (메인으로)" : "확인 (메인으로)",
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -109,7 +112,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 2. 오답 화면 (하단 버튼 동작 수정)
+  // 2. 오답 화면
   Widget _buildWrongAnswerView(BuildContext context, int score) {
     return Column(
       children: [
@@ -130,9 +133,9 @@ class TodaysQuizResultPage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              const Text(
-                "아쉬워요! 조금만 더 힘내세요 💪",
-                style: TextStyle(
+              Text(
+                isTodaysQuiz ? "오늘의 학습 결과" : "퀴즈 결과",
+                style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -303,22 +306,31 @@ class TodaysQuizResultPage extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                // ★ 마법의 로직: 현재 화면(결과창)을 닫으면,
-                // 이전에 보고 있던 StudyPage(단어 리스트)가 자연스럽게 나타납니다!
-                Navigator.pop(context);
+              onPressed: () async {
+                // ★ 오답이 있더라도 '오늘의 퀴즈'를 끝까지 풀었다면 완료 처리를 할지 결정
+                // 사용자님의 요청에 따라, 여기서도 isTodaysQuiz일 때만 완료 로직을 태웁니다.
+                if (isTodaysQuiz) {
+                  final cacheBox = Hive.box('cache');
+                  final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                  cacheBox.put("today_completed_$todayStr", true);
+                  await StudyRecordService.markTodayAsDone();
+                }
+
+                if (context.mounted) {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueGrey.shade600, // 복습하러 가는 차분한 톤
+                backgroundColor: isTodaysQuiz ? Colors.indigo : Colors.blueGrey.shade600,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                "단어 목록 다시 보기",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              child: Text(
+                isTodaysQuiz ? "학습 완료 (메인으로)" : "확인 (메인으로)",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ),

@@ -10,14 +10,16 @@ class QuizPage extends StatefulWidget {
   final int questionCount;
   final int? dayNumber;
   final List<Word>? dayWords;
+  final bool isWrongAnswerQuiz; // ★ 추가
 
   const QuizPage({
     super.key,
-    required this.category,
-    required this.level,
-    required this.questionCount,
+    this.category = "오답노트", // ★ 기본값 설정
+    this.level = "",
+    this.questionCount = 0,
     this.dayNumber,
     this.dayWords,
+    this.isWrongAnswerQuiz = false, // ★ 추가
   });
 
   @override
@@ -38,9 +40,14 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    _cacheKey = widget.dayNumber != null
-        ? "quiz_day_${widget.category}_${widget.level}_${widget.dayNumber}"
-        : "quiz_match_${widget.category}_${widget.level}";
+    // ★ 캐시 키 생성 로직 수정
+    if (widget.isWrongAnswerQuiz) {
+      _cacheKey = "quiz_wrong_answers";
+    } else {
+      _cacheKey = widget.dayNumber != null
+          ? "quiz_day_${widget.category}_${widget.level}_${widget.dayNumber}"
+          : "quiz_match_${widget.category}_${widget.level}";
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkProgressAndInitialize();
@@ -57,21 +64,21 @@ class _QuizPageState extends State<QuizPage> {
         _showResumeDialog(savedData);
       } else {
         _clearProgress();
-        // 기록이 없는 것과 동일하게 처리
-        if (widget.dayNumber == null && widget.questionCount <= 0) {
-          _showQuestionCountSelection();
-        } else {
-          int count = widget.questionCount > 0 ? widget.questionCount : 10;
-          _loadNewQuizData(count);
-        }
+        _initializeQuiz();
       }
     } else {
-      if (widget.dayNumber == null && widget.questionCount <= 0) {
-        _showQuestionCountSelection();
-      } else {
-        int count = widget.questionCount > 0 ? widget.questionCount : 10;
-        _loadNewQuizData(count);
-      }
+      _initializeQuiz();
+    }
+  }
+
+  void _initializeQuiz() {
+    if (widget.isWrongAnswerQuiz) {
+      _loadNewQuizData(0); // 오답노트 퀴즈는 전체 로드
+    } else if (widget.dayNumber == null && widget.questionCount <= 0) {
+      _showQuestionCountSelection();
+    } else {
+      int count = widget.questionCount > 0 ? widget.questionCount : 10;
+      _loadNewQuizData(count);
     }
   }
 
@@ -92,15 +99,7 @@ class _QuizPageState extends State<QuizPage> {
             onPressed: () {
               _clearProgress();
               Navigator.pop(dialogContext, true); // 정상적으로 선택했음을 true로 알림
-
-              if (widget.dayNumber == null && widget.questionCount <= 0) {
-                _showQuestionCountSelection();
-              } else {
-                int count = widget.questionCount > 0
-                    ? widget.questionCount
-                    : 10;
-                _loadNewQuizData(count);
-              }
+              _initializeQuiz();
             },
             child: const Text(
               "새로 풀기",
@@ -184,6 +183,8 @@ class _QuizPageState extends State<QuizPage> {
   void _restoreFromCache(dynamic savedData) {
     final wordBox = Hive.box<Word>('words');
     final allWords = wordBox.values.toList();
+    final wrongBox = Hive.box<Word>('wrong_answers');
+    final allWrongWords = wrongBox.values.toList();
 
     try {
       setState(() {
@@ -198,18 +199,25 @@ class _QuizPageState extends State<QuizPage> {
 
         _quizList = [];
         for (var data in _quizData) {
-          final word = allWords.firstWhere(
-            (w) => w.spelling == data['question'] && w.type == 'Word',
-            orElse: () =>
-                allWords.firstWhere((w) => w.spelling == data['question']),
-          );
+          // ★ 오답노트 퀴즈인 경우 wrong_answers 박스에서도 찾음
+          Word? word;
+          try {
+            word = allWords.firstWhere(
+              (w) => w.spelling == data['question'] && w.type == 'Word',
+            );
+          } catch (e) {
+            try {
+              word = allWords.firstWhere((w) => w.spelling == data['question']);
+            } catch (e) {
+              word = allWrongWords.firstWhere((w) => w.spelling == data['question']);
+            }
+          }
           _quizList.add(word);
           data['word'] = word;
         }
       });
     } catch (e) {
-      int count = widget.questionCount > 0 ? widget.questionCount : 10;
-      _loadNewQuizData(count);
+      _initializeQuiz();
     }
   }
 
@@ -239,7 +247,7 @@ class _QuizPageState extends State<QuizPage> {
       List<Word> finalPool = uniqueMap.values.toList();
       finalPool.shuffle();
 
-      int targetCount = count > 0 ? count : 10;
+      int targetCount = count > 0 ? count : (widget.isWrongAnswerQuiz ? finalPool.length : 10);
       _quizList = finalPool.take(min(targetCount, finalPool.length)).toList();
     }
 
@@ -379,6 +387,7 @@ class _QuizPageState extends State<QuizPage> {
           builder: (context) => TodaysQuizResultPage(
             wrongAnswers: _wrongAnswersList,
             totalCount: _quizData.length,
+            isTodaysQuiz: false,
           ),
         ),
       );
@@ -428,9 +437,11 @@ class _QuizPageState extends State<QuizPage> {
     final bool isSpellingToMeaning =
         currentQuestion['isSpellingToMeaning'] ?? true;
 
-    String appBarTitle = widget.dayNumber != null
-        ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizData.length})"
-        : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizData.length})";
+    String appBarTitle = widget.isWrongAnswerQuiz
+        ? "오답노트 퀴즈 (${_currentIndex + 1}/${_quizData.length})"
+        : (widget.dayNumber != null
+            ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizData.length})"
+            : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizData.length})");
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
+import 'quiz_page.dart';
 
 class WrongAnswerPage extends StatefulWidget {
   const WrongAnswerPage({super.key});
@@ -31,12 +32,13 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("오답노트 초기화"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("오답노트 초기화", style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text("저장된 모든 오답을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("취소"),
+            child: const Text("취소", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -49,7 +51,10 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: const Text("전체 삭제", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -80,6 +85,30 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
           const SizedBox(width: 10),
         ],
       ),
+      floatingActionButton: wrongWords.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QuizPage(
+                      dayWords: wrongWords,
+                      isWrongAnswerQuiz: true,
+                    ),
+                  ),
+                );
+              },
+              backgroundColor: Colors.indigo,
+              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+              label: const Text(
+                "오답 퀴즈 시작",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
       body: wrongWords.isEmpty
           ? Center(
               child: Column(
