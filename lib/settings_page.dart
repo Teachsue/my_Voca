@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'theme_manager.dart';
 import 'word_model.dart';
 import 'calendar_page.dart';
+import 'seasonal_background.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -129,15 +130,17 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final currentSelected = ThemeManager.selectedSeason;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final bgGradient = ThemeManager.bgGradient;
     double progress = _totalWordsCount > 0 ? (_learnedWordsCount / _totalWordsCount) : 0.0;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text("설정 및 학습 리포트", style: TextStyle(fontWeight: FontWeight.w900))),
-      body: Container(
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: bgGradient)),
-        child: SafeArea(
+    return SeasonalBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text("설정 및 학습 리포트", style: TextStyle(fontWeight: FontWeight.w900)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -146,18 +149,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSectionHeader("나의 학습 현황"),
                 Container(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(32)),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
                   child: Column(
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("전체 진도율", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.blueGrey)),
-                          Text("${(progress * 100).toStringAsFixed(1)}%", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: primaryColor)),
+                          const Text("전체 진도율", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                          Text("${(progress * 100).toStringAsFixed(1)}%", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: primaryColor)),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: progress, minHeight: 12, backgroundColor: primaryColor.withOpacity(0.1), valueColor: AlwaysStoppedAnimation(primaryColor))),
+                      ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: progress, minHeight: 10, backgroundColor: primaryColor.withOpacity(0.1), valueColor: AlwaysStoppedAnimation(primaryColor))),
                       const SizedBox(height: 20),
                       _buildStatRow("학습한 단어", "$_learnedWordsCount / $_totalWordsCount"),
                       _buildStatRow("추천 레벨", "TOEIC $_recommendedLevel"),
@@ -165,10 +168,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
                 _buildSectionHeader("학습 도구 바로가기"),
                 Container(
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(32)),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
                   child: Column(
                     children: [
                       _buildActionTile("출석 체크 달력", Icons.calendar_today_rounded, primaryColor, () {
@@ -177,11 +180,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
                 _buildSectionHeader("계절 테마 설정"),
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(32)),
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -193,10 +196,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
                 _buildSectionHeader("데이터 관리"),
                 Container(
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(32)),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
                   child: Column(
                     children: [
                       _buildActionTile("진단 결과 초기화", Icons.refresh_rounded, Colors.blueGrey, _resetLevelTest),
@@ -215,13 +218,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(padding: const EdgeInsets.only(left: 8, bottom: 16), child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))));
+    return Padding(padding: const EdgeInsets.only(left: 4, bottom: 12), child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))));
   }
 
   Widget _buildStatRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.blueGrey)), Text(value, style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF1E293B)))]),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey, fontSize: 14)), Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF1E293B), fontSize: 15))]),
     );
   }
 
@@ -234,18 +237,18 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: isSelected ? color : (isActual ? color.withOpacity(0.15) : Colors.white), shape: BoxShape.circle, border: isActual && !isSelected ? Border.all(color: color, width: 2) : null),
-            child: Icon(icon, color: isSelected ? Colors.white : (isActual ? color : Colors.blueGrey[200]), size: 24),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: isSelected ? color : (isActual ? color.withOpacity(0.1) : Colors.white), shape: BoxShape.circle, border: isActual && !isSelected ? Border.all(color: color, width: 2) : null),
+            child: Icon(icon, color: isSelected ? Colors.white : (isActual ? color : Colors.grey[300]), size: 22),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: isSelected || isActual ? color : Colors.blueGrey[300])),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected || isActual ? color : Colors.grey[400])),
         ],
       ),
     );
   }
 
   Widget _buildActionTile(String title, IconData icon, Color color, VoidCallback onTap) {
-    return ListTile(onTap: onTap, leading: Icon(icon, color: color), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)), trailing: const Icon(Icons.chevron_right_rounded));
+    return ListTile(onTap: onTap, leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 18)), title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)), trailing: const Icon(Icons.chevron_right_rounded, size: 20));
   }
 }

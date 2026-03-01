@@ -26,67 +26,59 @@ class ThemeManager {
     themeNotifier.value = season; 
   }
 
+  static Season get systemSeason {
+    final month = DateTime.now().month;
+    if (month >= 3 && month <= 5) return Season.spring;
+    if (month >= 6 && month <= 8) return Season.summer;
+    if (month >= 9 && month <= 11) return Season.autumn;
+    return Season.winter;
+  }
+
   static Season get effectiveSeason {
-    if (selectedSeason == Season.auto) {
-      final month = DateTime.now().month;
-      if (month >= 3 && month <= 5) return Season.spring;
-      if (month >= 6 && month <= 8) return Season.summer;
-      if (month >= 9 && month <= 11) return Season.autumn;
-      return Season.winter;
-    }
+    if (selectedSeason == Season.auto) return systemSeason;
     return selectedSeason;
   }
 
-  static Color get seasonColor {
+  // ★ Japan App 스타일의 포인트 컬러 (아이콘, 강조 텍스트용)
+  static Color get pointColor {
     switch (effectiveSeason) {
-      case Season.spring: return const Color(0xFFFF85A1); // 로즈 핑크
-      case Season.summer: return const Color(0xFF0077B6); // 딥 오션 네이비
-      case Season.autumn: return const Color(0xFFBC6C25); // 어스 브라운
-      case Season.winter: return const Color(0xFF4A4E69); // 뮤트 퍼플
-      default: return const Color(0xFF6366F1);
+      case Season.spring: return const Color(0xFFFF6B81); // 벚꽃 핑크
+      case Season.summer: return const Color(0xFF00A8FF); // 시원한 블루
+      case Season.autumn: return const Color(0xFFE67E22); // 낙엽 오렌지
+      case Season.winter: return const Color(0xFF607D8B); // 차분한 그레이블루
+      default: return const Color(0xFF5B86E5);
     }
   }
 
-  static Color get seasonSecondaryColor {
+  // ★ 배너용 그라데이션 컬러 (Japan App 스타일)
+  static List<Color> get bannerGradient {
     switch (effectiveSeason) {
-      case Season.spring: return const Color(0xFFFBC2EB);
-      case Season.summer: return const Color(0xFF90E0EF); // 시원한 민트블루
-      case Season.autumn: return const Color(0xFFDDA15E);
-      case Season.winter: return const Color(0xFFC9D6FF);
-      default: return const Color(0xFF818CF8);
+      case Season.spring: return [const Color(0xFFFFB7C5), const Color(0xFFF08080)];
+      case Season.summer: return [const Color(0xFF4FC3F7), const Color(0xFF1976D2)];
+      case Season.autumn: return [const Color(0xFFFBC02D), const Color(0xFFE64A19)];
+      case Season.winter: return [const Color(0xFF90A4AE), const Color(0xFF455A64)];
+      default: return [const Color(0xFF5B86E5), const Color(0xFF36D1DC)];
     }
   }
 
-  static Color get surfaceColor {
-    switch (effectiveSeason) {
-      case Season.spring: return const Color(0xFFFFF5F6);
-      case Season.summer: return const Color(0xFFF0F9FF);
-      case Season.autumn: return const Color(0xFFFDF8F2);
-      case Season.winter: return const Color(0xFFF4F7FA);
-      default: return const Color(0xFFF8FAFC);
-    }
-  }
-
+  // ★ 배경 그라데이션 (SeasonalBackground에서 사용)
   static List<Color> get bgGradient {
-    final base = surfaceColor;
     switch (effectiveSeason) {
-      case Season.spring: return [base, const Color(0xFFFCE4EC)];
-      case Season.summer: return [base, const Color(0xFFE0F2FE)];
-      case Season.autumn: return [base, const Color(0xFFF5EBE0)];
-      case Season.winter: return [base, const Color(0xFFE2E8F0)];
-      default: return [base, Colors.white];
+      case Season.spring: return [const Color(0xFFFFF0F5), const Color(0xFFFFFFFF)];
+      case Season.summer: return [const Color(0xFFE0F7FA), const Color(0xFFFFFFFF)];
+      case Season.autumn: return [const Color(0xFFFFF3E0), const Color(0xFFFFFFFF)];
+      case Season.winter: return [const Color(0xFFF1F4F8), const Color(0xFFFFFFFF)];
+      default: return [const Color(0xFFF8FAFC), const Color(0xFFFFFFFF)];
     }
   }
 
-  static List<Color> get seasonGradient => bgGradient;
-
-  static String get seasonBackgroundImage {
+  static IconData get seasonIconData {
     switch (effectiveSeason) {
-      case Season.spring: return "https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&w=1200&auto=format&fit=crop";
-      case Season.summer: return "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop";
-      case Season.autumn: return "https://images.unsplash.com/photo-1507181378874-17796030911a?q=80&w=1200&auto=format&fit=crop";
-      case Season.winter: return "https://images.unsplash.com/photo-1418985991508-e47386d96a71?q=80&w=1200&auto=format&fit=crop";
-      default: return "";
+      case Season.spring: return Icons.local_florist_rounded;
+      case Season.summer: return Icons.wb_sunny_rounded;
+      case Season.autumn: return Icons.eco_rounded;
+      case Season.winter: return Icons.ac_unit_rounded;
+      default: return Icons.auto_awesome_rounded;
     }
   }
 
@@ -101,27 +93,22 @@ class ThemeManager {
   }
 
   static ThemeData getThemeData() {
-    final primaryColor = seasonColor;
+    final primary = pointColor;
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'Pretendard',
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        primary: primaryColor,
-        surface: surfaceColor,
+        seedColor: primary,
+        primary: primary,
+        surface: Colors.white,
       ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-        headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
-        bodyLarge: TextStyle(fontSize: 18, color: Color(0xFF334155)),
-      ),
-      scaffoldBackgroundColor: surfaceColor,
+      scaffoldBackgroundColor: Colors.transparent,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: Color(0xFF1E293B),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+        titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
       ),
     );
   }

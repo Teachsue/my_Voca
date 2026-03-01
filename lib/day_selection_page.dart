@@ -5,6 +5,7 @@ import 'word_model.dart';
 import 'study_page.dart';
 import 'quiz_page.dart';
 import 'theme_manager.dart';
+import 'seasonal_background.dart';
 
 class DaySelectionPage extends StatefulWidget {
   final String category;
@@ -111,63 +112,63 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "${widget.category} ${widget.level}",
-          style: const TextStyle(fontWeight: FontWeight.w900),
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return SeasonalBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text("${widget.category} ${widget.level}", style: const TextStyle(fontWeight: FontWeight.w900)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildContinueBanner(context),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(28, 32, 28, 16),
-                  child: Text(
-                    "학습 리스트",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-                  ),
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.8,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildContinueBanner(context),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
+                    child: Text(
+                      "학습 리스트",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
                     ),
-                    itemCount: _dayChunks.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _dayChunks.length) return _buildTotalQuizCard(context);
-                      return _buildDayCard(context, index);
-                    },
                   ),
-                ),
-              ],
-            ),
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.1,
+                      ),
+                      itemCount: _dayChunks.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == _dayChunks.length) return _buildTotalQuizCard(context);
+                        return _buildDayCard(context, index);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
   Widget _buildContinueBanner(BuildContext context) {
     final cacheBox = Hive.box('cache');
     final int lastStudiedDay = cacheBox.get('last_studied_day_${widget.category}_${widget.level}', defaultValue: 1);
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final List<Color> bannerGradient = ThemeManager.bannerGradient;
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: GestureDetector(
         onTap: () {
           Navigator.push(
@@ -183,12 +184,12 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
           );
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+          padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(32),
+            gradient: LinearGradient(colors: bannerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 8)),
+              BoxShadow(color: bannerGradient[0].withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5)),
             ],
           ),
           child: Row(
@@ -199,17 +200,17 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
                   children: [
                     Text(
                       "DAY $lastStudiedDay 이어하기",
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      "멈췄던 부분부터 바로 시작",
-                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14, fontWeight: FontWeight.w600),
+                      "멈췄던 부분부터 학습을 시작하세요",
+                      style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36),
+              const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 32),
             ],
           ),
         ),
@@ -240,12 +241,12 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: isCurrent ? primaryColor.withOpacity(0.05) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isCurrent ? primaryColor : const Color(0xFFF1F5F9),
-            width: isCurrent ? 2.5 : 1.5,
-          ),
+          color: Colors.white.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(16),
+          border: isCurrent ? Border.all(color: primaryColor.withOpacity(0.5), width: 2) : null,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -253,20 +254,17 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
             Text(
               "$dayNumber",
               style: TextStyle(
-                fontSize: 34, // ★ 숫자 크기 확대
+                fontSize: 24, 
                 fontWeight: FontWeight.w900, 
                 color: isCurrent ? primaryColor : const Color(0xFF1E293B),
-                letterSpacing: -1.0
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               "DAY",
               style: TextStyle(
-                fontSize: 11, 
-                fontWeight: FontWeight.w900, 
-                color: isCurrent ? primaryColor : const Color(0xFF94A3B8),
-                letterSpacing: 1.0
+                fontSize: 10, 
+                fontWeight: FontWeight.bold, 
+                color: isCurrent ? primaryColor.withOpacity(0.7) : Colors.grey[500],
               ),
             ),
           ],
@@ -281,17 +279,18 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
       onTap: _checkSavedQuizAndStart,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.white.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: primaryColor.withOpacity(0.2)),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 30),
-            SizedBox(height: 8),
+            Icon(Icons.psychology_alt_rounded, color: primaryColor, size: 24),
+            const SizedBox(height: 4),
             Text(
               "전체 퀴즈",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor),
             ),
           ],
         ),

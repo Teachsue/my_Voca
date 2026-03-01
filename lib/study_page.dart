@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'quiz_page.dart';
+import 'seasonal_background.dart';
 
 class StudyPage extends StatefulWidget {
   final String category;
@@ -32,15 +33,12 @@ class _StudyPageState extends State<StudyPage> {
     super.initState();
     _currentDayIndex = widget.initialDayIndex;
     _pageController = PageController(initialPage: _currentDayIndex);
-
-    // ★ 랜덤 셔플 로직 유지
     _shuffledDayChunks = [];
     for (var chunk in widget.allDayChunks) {
       List<Word> shuffledChunk = List<Word>.from(chunk);
       shuffledChunk.shuffle();
       _shuffledDayChunks.add(shuffledChunk);
     }
-
     _saveLastStudiedDay(_currentDayIndex + 1);
   }
 
@@ -58,192 +56,103 @@ class _StudyPageState extends State<StudyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: Text(
-          "${widget.category} ${widget.level} - DAY ${_currentDayIndex + 1}",
+    return SeasonalBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text("${widget.category} ${widget.level} - DAY ${_currentDayIndex + 1}", style: const TextStyle(fontWeight: FontWeight.w900)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20), onPressed: () => Navigator.pop(context)),
+          actions: [
+            IconButton(icon: const Icon(Icons.home_rounded), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst)),
+            const SizedBox(width: 8),
+          ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_rounded),
-            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentDayIndex = index;
-          });
-          _saveLastStudiedDay(_currentDayIndex + 1);
-        },
-        itemCount: _shuffledDayChunks.length,
-        itemBuilder: (context, dayIndex) {
-          final dayWords = _shuffledDayChunks[dayIndex];
-          final int dayNumber = dayIndex + 1;
+        body: PageView.builder(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() { _currentDayIndex = index; });
+            _saveLastStudiedDay(_currentDayIndex + 1);
+          },
+          itemCount: _shuffledDayChunks.length,
+          itemBuilder: (context, dayIndex) {
+            final dayWords = _shuffledDayChunks[dayIndex];
+            final int dayNumber = dayIndex + 1;
 
-          return Column(
-            children: [
-              Expanded(
-                child: dayWords.isEmpty
-                    ? const Center(child: Text("등록된 단어가 없습니다."))
-                    : ListView.separated(
-                        key: ValueKey("list_$dayIndex"),
-                        padding: const EdgeInsets.all(20),
-                        itemCount: dayWords.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 15),
-                        itemBuilder: (context, index) {
-                          final word = dayWords[index];
-                          int wordNumber = index + 1;
-
-                          // ★ StatefulBuilder를 사용하여 아이콘 상태만 부분 갱신
-                          return StatefulBuilder(
-                            builder: (context, setStateItem) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 15,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(15),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.1),
-                                      blurRadius: 5,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 35,
-                                      height: 35,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                        shape: BoxShape.circle,
+            return Column(
+              children: [
+                Expanded(
+                  child: dayWords.isEmpty
+                      ? const Center(child: Text("등록된 단어가 없습니다."))
+                      : ListView.separated(
+                          key: ValueKey("list_$dayIndex"),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          itemCount: dayWords.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final word = dayWords[index];
+                            return StatefulBuilder(
+                              builder: (context, setStateItem) {
+                                return Container(
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 32, height: 32,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                                        child: Text("${index + 1}", style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                       ),
-                                      child: Text(
-                                        "$wordNumber",
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(word.spelling, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                                            const SizedBox(height: 2),
+                                            Text(word.meaning, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 15),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            word.spelling,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            word.meaning,
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
+                                      IconButton(
+                                        onPressed: () { setStateItem(() { word.isScrap = !word.isScrap; word.save(); }); },
+                                        icon: Icon(word.isScrap ? Icons.star_rounded : Icons.star_border_rounded, color: word.isScrap ? Colors.amber : Colors.grey[300], size: 28),
                                       ),
-                                    ),
-                                    // ★ 북마크(스크랩) 버튼 추가
-                                    IconButton(
-                                      onPressed: () {
-                                        setStateItem(() {
-                                          word.isScrap = !word.isScrap;
-                                          word.save(); // DB 저장
-                                        });
-                                      },
-                                      icon: Icon(
-                                        word.isScrap
-                                            ? Icons.star_rounded
-                                            : Icons.star_border_rounded,
-                                        color: word.isScrap
-                                            ? Colors.amber
-                                            : Colors.grey[400],
-                                        size: 30,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-              ),
-              Container(
-                padding: EdgeInsets.fromLTRB(20, 15, 20, 15 + bottomPadding),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuizPage(
-                            category: widget.category,
-                            level: widget.level,
-                            questionCount: 0,
-                            dayNumber: dayNumber,
-                            dayWords: dayWords,
-                          ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.edit_document, size: 24),
-                    label: Text(
-                      "DAY $dayNumber 시험 보기",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 0,
+                ),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]),
+                  child: SizedBox(
+                    width: double.infinity, height: 60,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => QuizPage(category: widget.category, level: widget.level, dayNumber: dayNumber, dayWords: dayWords)));
+                      },
+                      icon: const Icon(Icons.edit_document, size: 22),
+                      label: Text("DAY $dayNumber 퀴즈 풀기", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), elevation: 0),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -16,6 +16,7 @@ import 'statistics_page.dart';
 import 'scrap_page.dart'; 
 import 'theme_manager.dart';
 import 'settings_page.dart';
+import 'seasonal_background.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,30 +66,31 @@ class _HomePageState extends State<HomePage> {
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     bool isCompleted = cacheBox.get("today_completed_$todayStr", defaultValue: false);
     String? recommendedLevel = cacheBox.get('user_recommended_level');
-    final bgGradient = ThemeManager.bgGradient;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final List<Color> bannerGradient = ThemeManager.bannerGradient;
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: bgGradient)),
-        child: SafeArea(
+    return SeasonalBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 15.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(context),
-                const SizedBox(height: 36),
-                _buildMainBanner(context, isCompleted),
-                const SizedBox(height: 20),
-                _buildLevelBanner(context, recommendedLevel),
-                const SizedBox(height: 48),
-                const Text("난이도별 단어 학습", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: -0.8)),
-                const SizedBox(height: 20),
-                _buildLevelSelectionRow(),
-                const SizedBox(height: 44),
-                const Text("학습 도구", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: -0.8)),
-                const SizedBox(height: 20),
-                _buildUtilityRow(),
+                const SizedBox(height: 24),
+                _buildMainBanner(context, isCompleted, bannerGradient),
+                const SizedBox(height: 16),
+                _buildLevelBanner(context, recommendedLevel, primaryColor),
+                const SizedBox(height: 32),
+                const Text("TOEIC 난이도별 학습", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                const SizedBox(height: 12),
+                _buildLevelGrid(context),
+                const SizedBox(height: 32),
+                const Text("나의 학습 도구", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                const SizedBox(height: 12),
+                _buildUtilityRow(context),
                 const SizedBox(height: 40),
               ],
             ),
@@ -106,34 +108,22 @@ class _HomePageState extends State<HomePage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(DateFormat('M월 d일 E요일', 'ko_KR').format(DateTime.now()), style: TextStyle(fontSize: 15, color: primaryColor, fontWeight: FontWeight.w900)),
-                const SizedBox(width: 8),
-                Text(ThemeManager.seasonIcon, style: const TextStyle(fontSize: 18)),
-              ],
-            ),
-            const Text("POKET VOCA", style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: -1.5)),
+            const Text("TOEIC 단어 정복", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+            Text(DateFormat('M월 d일 E요일', 'ko_KR').format(DateTime.now()), style: TextStyle(fontSize: 13, color: Colors.blueGrey[400], fontWeight: FontWeight.w600)),
           ],
         ),
         Row(
           children: [
             _buildHeaderIconButton(
-              icon: Icons.calendar_today_rounded,
+              icon: Icons.calendar_month_rounded,
               color: primaryColor,
-              onTap: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => const CalendarPage()));
-                _refresh();
-              },
+              onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const CalendarPage())); _refresh(); },
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             _buildHeaderIconButton(
               icon: Icons.settings_rounded,
-              color: const Color(0xFF1E293B),
-              onTap: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage()));
-                _refresh();
-              },
+              color: primaryColor,
+              onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())); _refresh(); },
             ),
           ],
         ),
@@ -142,26 +132,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHeaderIconButton({required IconData icon, required Color color, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 54, height: 54,
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 26),
+    return Container(
+      width: 44, height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.8),
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
+      child: IconButton(icon: Icon(icon, color: color, size: 22), onPressed: onTap, padding: EdgeInsets.zero),
     );
   }
 
-  Widget _buildMainBanner(BuildContext context, bool isCompleted) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+  Widget _buildMainBanner(BuildContext context, bool isCompleted, List<Color> gradient) {
     return GestureDetector(
       onTap: () async { await _startTodaysQuiz(); _refresh(); },
       child: Container(
-        width: double.infinity, padding: const EdgeInsets.all(30),
+        width: double.infinity, padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isCompleted ? const Color(0xFF1E293B) : primaryColor,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [BoxShadow(color: (isCompleted ? const Color(0xFF1E293B) : primaryColor).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
+          gradient: LinearGradient(
+            colors: isCompleted ? [Colors.grey.shade600, Colors.grey.shade700] : gradient,
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: (isCompleted ? Colors.black26 : gradient[0].withOpacity(0.3)), blurRadius: 12, offset: const Offset(0, 6))],
         ),
         child: Row(
           children: [
@@ -169,96 +162,101 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 6),
-                  Text(isCompleted ? "정말 고생하셨습니다." : "매일 10개 단어의 기적", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 4),
+                  Text(isCompleted ? "정말 고생하셨습니다." : "매일 10개 단어로 실력을 키우세요", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 24),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelBanner(BuildContext context, String? recommendedLevel) {
+  Widget _buildLevelBanner(BuildContext context, String? recommendedLevel, Color pointColor) {
+    final bool hasResult = recommendedLevel != null;
     return GestureDetector(
       onTap: () async {
-        if (recommendedLevel != null) {
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: recommendedLevel)));
-          _refresh();
-        } else {
-          _showLevelTestGuide(context);
-        }
+        if (hasResult) await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: recommendedLevel)));
+        else _showLevelTestGuide(context);
+        _refresh();
       },
       child: Container(
-        width: double.infinity, padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(28)),
+        width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: hasResult ? const Color(0xFFF0F7FF) : Colors.white.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        ),
         child: Row(
           children: [
-            const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 22),
-            const SizedBox(width: 14),
-            Expanded(child: Text(recommendedLevel != null ? "추천 레벨: TOEIC $recommendedLevel" : "나의 단어 실력 진단하기", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF475569)))),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 22),
+            Icon(hasResult ? Icons.workspace_premium_rounded : Icons.psychology_alt_rounded, color: hasResult ? const Color(0xFF5B86E5) : pointColor, size: 28),
+            const SizedBox(width: 12),
+            Expanded(child: Text(hasResult ? "추천 레벨: TOEIC $recommendedLevel" : "실력 진단 테스트 시작하기", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF475569)))),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelSelectionRow() {
-    return Row(children: [_buildLevelMiniCard("500", "입문"), const SizedBox(width: 14), _buildLevelMiniCard("700", "중급"), const SizedBox(width: 14), _buildLevelMiniCard("900+", "실전")]);
-  }
-
-  Widget _buildLevelMiniCard(String level, String desc) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: level))); _refresh(); },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 28),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(28)),
-          child: Column(
-            children: [
-              Text(level, style: TextStyle(color: primaryColor, fontSize: 26, fontWeight: FontWeight.w900)),
-              Text(desc, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w800)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUtilityRow() {
-    return Row(
+  Widget _buildLevelGrid(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.3,
       children: [
-        _buildUtilityCard("오답노트", Icons.edit_document, const Color(0xFFF59E0B)),
-        const SizedBox(width: 14),
-        _buildUtilityCard("중요단어", Icons.star_rounded, const Color(0xFFFACC15)),
+        _buildLevelCard(context, "500", "입문", Colors.teal),
+        _buildLevelCard(context, "700", "중급", Colors.indigo),
+        _buildLevelCard(context, "900+", "실전", Colors.purple),
       ],
     );
   }
 
-  Widget _buildUtilityCard(String title, IconData icon, Color iconColor) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () async {
-          if (title == "오답노트") await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage()));
-          else await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage()));
-          _refresh();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(28)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: iconColor, size: 28),
-              const SizedBox(width: 12),
-              Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-            ],
-          ),
+  Widget _buildLevelCard(BuildContext context, String level, String desc, Color color) {
+    return GestureDetector(
+      onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: level))); _refresh(); },
+      child: Container(
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(level, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)),
+            Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUtilityRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _buildCategoryCard(context, "오답노트", "틀린 단어", Icons.error_outline_rounded, Colors.redAccent, () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage())); _refresh(); })),
+        const SizedBox(width: 12),
+        Expanded(child: _buildCategoryCard(context, "중요단어", "스크랩", Icons.star_rounded, Colors.amber, () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage())); _refresh(); })),
+      ],
+    );
+  }
+
+  Widget _buildCategoryCard(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)]),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          ],
         ),
       ),
     );
@@ -271,15 +269,17 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.white, surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          contentPadding: const EdgeInsets.all(24),
+          title: const Text("실력 진단 테스트", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("실력 진단 테스트", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-              const SizedBox(height: 20),
+              const Text("나의 현재 실력을 정확히 진단하고\n맞춤형 단어를 추천받으세요.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.blueGrey, height: 1.5)),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async { Navigator.pop(dialogContext); await Navigator.push(context, MaterialPageRoute(builder: (context) => const LevelTestPage())); _refresh(); },
-                style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                 child: const Text("시작하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
