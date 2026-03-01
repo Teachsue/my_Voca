@@ -82,6 +82,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
     final wrongWords = _wrongBox.values.toList().reversed.toList();
     final textColor = ThemeManager.textColor;
     final isDark = ThemeManager.isDarkMode;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return SeasonalBackground(
       child: Scaffold(
@@ -105,9 +106,19 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => QuizPage(dayWords: wrongWords, isWrongAnswerQuiz: true)));
                 },
-                backgroundColor: isDark ? Theme.of(context).colorScheme.primary : const Color(0xFF1E293B),
-                icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
-                label: const Text("오답 퀴즈", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: isDark ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                ),
+                icon: Icon(Icons.play_arrow_rounded, color: isDark ? primaryColor : Colors.white),
+                label: Text(
+                  "오답 퀴즈", 
+                  style: TextStyle(
+                    color: isDark ? primaryColor : Colors.white, 
+                    fontWeight: FontWeight.bold
+                  )
+                ),
               )
             : null,
         body: wrongWords.isEmpty
@@ -151,8 +162,18 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                                   const SizedBox(width: 10),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(color: levelColor.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
-                                    child: Text(word.level, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? levelColor.withOpacity(0.8) : levelColor)),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? levelColor.withOpacity(0.1) : levelColor.withOpacity(0.15), 
+                                      borderRadius: BorderRadius.circular(6)
+                                    ),
+                                    child: Text(
+                                      word.level, 
+                                      style: TextStyle(
+                                        fontSize: 10, 
+                                        fontWeight: FontWeight.w900, 
+                                        color: isDark ? levelColor.withOpacity(0.6) : levelColor
+                                      )
+                                    ),
                                   ),
                                 ],
                               ),
