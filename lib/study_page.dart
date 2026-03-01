@@ -140,7 +140,7 @@ class _StudyPageState extends State<StudyPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1F2937) : Colors.white.withOpacity(0.9),
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white.withOpacity(0.9),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))]
                   ),
                   child: SizedBox(
@@ -149,12 +149,18 @@ class _StudyPageState extends State<StudyPage> {
                       onPressed: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => QuizPage(category: widget.category, level: widget.level, dayNumber: dayNumber, dayWords: dayWords)));
                       },
-                      icon: const Icon(Icons.edit_document, size: 22),
-                      label: Text("DAY $dayNumber 퀴즈 풀기", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      icon: Icon(Icons.edit_document, size: 22, color: isDark ? primaryColor : Colors.white),
+                      label: Text(
+                        "DAY $dayNumber 퀴즈 풀기", 
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: isDark ? primaryColor : Colors.white)
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark ? primaryColor : const Color(0xFF1E293B), 
+                        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFF1E293B), 
                         foregroundColor: Colors.white, 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), 
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: isDark ? BorderSide(color: primaryColor.withOpacity(0.3), width: 1.5) : BorderSide.none,
+                        ), 
                         elevation: 0
                       ),
                     ),

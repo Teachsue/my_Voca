@@ -168,7 +168,9 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final bgGradient = ThemeManager.bgGradient;
+    final isDark = ThemeManager.isDarkMode;
+    final textColor = ThemeManager.textColor;
+    
     if (_quizData.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     final currentQuestion = _quizData[_currentIndex];
@@ -177,13 +179,13 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
     final bool isSpellingToMeaning = currentQuestion['isSpellingToMeaning'] ?? true;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text("오늘의 퀴즈 (${_currentIndex + 1}/${_quizData.length})", style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text("오늘의 퀴즈 (${_currentIndex + 1}/${_quizData.length})", style: TextStyle(fontWeight: FontWeight.w900, color: textColor)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor),
           onPressed: () { _saveProgress(); Navigator.pop(context); },
         ),
       ),
@@ -196,80 +198,97 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? (_isCorrect ? Colors.green[400] : primaryColor) : Colors.blueGrey[100],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                backgroundColor: _isChecked 
+                    ? (isDark ? const Color(0xFF334155) : (_isCorrect ? Colors.green[400] : primaryColor)) 
+                    : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: isDark && _isChecked ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                ),
                 elevation: 0,
               ),
               child: Text(
                 _isChecked ? ((_currentIndex < _quizData.length - 1) ? "다음 문제" : "결과 보기") : "정답을 선택하세요",
-                style: const TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  fontSize: 17, 
+                  color: isDark 
+                      ? (_isChecked ? primaryColor : Colors.white24) 
+                      : Colors.white, 
+                  fontWeight: FontWeight.w900
+                ),
               ),
             ),
           ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: bgGradient,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(isSpellingToMeaning ? "단어의 뜻은?" : "뜻에 맞는 단어는?", style: TextStyle(color: Colors.blueGrey[400], fontSize: 14, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 20),
-                      Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 32 : 26, fontWeight: FontWeight.w900, color: const Color(0xFF1E293B), letterSpacing: -0.5)),
-                    ],
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15)],
                 ),
-                const SizedBox(height: 32),
-                ...options.map((option) {
-                  bool isCorrectOption = option == currentQuestion['correctAnswer'];
-                  bool isSelected = option == _userSelectedAnswer;
-                  Color btnColor = Colors.white.withOpacity(0.8);
-                  Color textColor = const Color(0xFF1E293B);
-                  String buttonText = option;
-                  if (_isChecked) {
-                    String info = optionInfos[option] ?? "";
-                    if (info.isNotEmpty) buttonText += "\n($info)";
-                    if (isCorrectOption) { btnColor = Colors.green[50]!.withOpacity(0.9); textColor = Colors.green[900]!; }
-                    else if (isSelected) { btnColor = Colors.red[50]!.withOpacity(0.9); textColor = Colors.red[900]!; }
-                    else { textColor = Colors.blueGrey[200]!; }
+                child: Column(
+                  children: [
+                    Text(isSpellingToMeaning ? "단어의 뜻은?" : "뜻에 맞는 단어는?", style: TextStyle(color: ThemeManager.subTextColor, fontSize: 14, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 20),
+                    Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 32 : 26, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              ...options.map((option) {
+                bool isCorrectOption = option == currentQuestion['correctAnswer'];
+                bool isSelected = option == _userSelectedAnswer;
+                Color btnColor = isDark ? Colors.white.withOpacity(0.05) : Colors.white;
+                Color borderColor = isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03);
+                
+                if (_isChecked) {
+                  if (isCorrectOption) { 
+                    btnColor = isDark ? Colors.green[900]!.withOpacity(0.3) : Colors.green[50]!; 
+                    borderColor = isDark ? Colors.green[400]! : Colors.green[400]!; 
                   }
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(minHeight: 75),
-                      child: OutlinedButton(
-                        onPressed: () => _checkAnswer(option),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: btnColor,
-                          side: BorderSide(color: _isChecked && (isCorrectOption || isSelected) ? (isCorrectOption ? Colors.green : Colors.red) : Colors.black.withOpacity(0.03), width: 2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                        ),
-                        child: Text(buttonText, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: textColor, fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700)),
+                  else if (isSelected) { 
+                    btnColor = isDark ? Colors.red[900]!.withOpacity(0.3) : Colors.red[50]!; 
+                    borderColor = isDark ? Colors.red[400]! : Colors.red[400]!; 
+                  }
+                }
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 75),
+                    child: OutlinedButton(
+                      onPressed: () => _checkAnswer(option),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: btnColor,
+                        side: BorderSide(color: borderColor, width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      ),
+                      child: Text(
+                        _isChecked && optionInfos[option]!.isNotEmpty ? "$option\n(${optionInfos[option]})" : option, 
+                        textAlign: TextAlign.center, 
+                        style: TextStyle(
+                          fontSize: 16, 
+                          color: _isChecked 
+                              ? (isCorrectOption ? (isDark ? Colors.green[300] : Colors.green[700]) : (isSelected ? (isDark ? Colors.red[300] : Colors.red[700]) : (isDark ? Colors.white10 : Colors.grey[300])))
+                              : textColor, 
+                          fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700
+                        )
                       ),
                     ),
-                  );
-                }).toList(),
-              ],
-            ),
+                  ),
+                );
+              }).toList(),
+            ],
           ),
         ),
       ),

@@ -212,10 +212,10 @@ class _QuizPageState extends State<QuizPage> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(widget.isWrongAnswerQuiz ? "오답노트 퀴즈" : "퀴즈 (${_currentIndex + 1}/${_quizData.length})", style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(widget.isWrongAnswerQuiz ? "오답노트 퀴즈" : "퀴즈 (${_currentIndex + 1}/${_quizData.length})", style: TextStyle(fontWeight: FontWeight.w900, color: ThemeManager.textColor)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20), onPressed: () { _saveProgress(); Navigator.pop(context); }),
+        leading: IconButton(icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: ThemeManager.textColor), onPressed: () { _saveProgress(); Navigator.pop(context); }),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -225,12 +225,26 @@ class _QuizPageState extends State<QuizPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? (_isCorrect ? Colors.green[400] : primaryColor) : (isDark ? Colors.white10 : Colors.grey[300]),
+                backgroundColor: _isChecked 
+                    ? (isDark ? const Color(0xFF334155) : (_isCorrect ? Colors.green[400] : primaryColor))
+                    : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: isDark && _isChecked ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                ),
                 elevation: 0,
               ),
-              child: Text(_isChecked ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기") : "정답을 선택하세요", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+              child: Text(
+                _isChecked ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기") : "정답을 선택하세요", 
+                style: TextStyle(
+                  fontSize: 17, 
+                  fontWeight: FontWeight.w900, 
+                  color: isDark 
+                      ? (_isChecked ? primaryColor : Colors.white24) 
+                      : Colors.white
+                )
+              ),
             ),
           ),
         ),
@@ -258,11 +272,23 @@ class _QuizPageState extends State<QuizPage> {
               Color btnColor = isDark ? Colors.white.withOpacity(0.05) : Colors.white;
               Color borderColor = isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03);
               Color textColor = ThemeManager.textColor;
+              
               if (_isChecked) {
-                if (isCorrectOption) { btnColor = Colors.green[400]!.withOpacity(0.15); borderColor = Colors.green[400]!; textColor = isDark ? Colors.green[300]! : Colors.green[700]!; }
-                else if (isSelected) { btnColor = Colors.red[400]!.withOpacity(0.15); borderColor = Colors.red[400]!; textColor = isDark ? Colors.red[300]! : Colors.red[700]!; }
-                else { textColor = ThemeManager.subTextColor.withOpacity(0.5); }
+                if (isCorrectOption) { 
+                  btnColor = isDark ? Colors.green[900]!.withOpacity(0.3) : Colors.green[50]!; 
+                  borderColor = isDark ? Colors.green[400]! : Colors.green[400]!; 
+                  textColor = isDark ? Colors.green[300]! : Colors.green[700]!; 
+                }
+                else if (isSelected) { 
+                  btnColor = isDark ? Colors.red[900]!.withOpacity(0.3) : Colors.red[50]!; 
+                  borderColor = isDark ? Colors.red[400]! : Colors.red[400]!; 
+                  textColor = isDark ? Colors.red[300]! : Colors.red[700]!; 
+                }
+                else { 
+                  textColor = isDark ? Colors.white10 : ThemeManager.subTextColor.withOpacity(0.5); 
+                }
               }
+              
               return Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Container(
@@ -270,8 +296,17 @@ class _QuizPageState extends State<QuizPage> {
                   constraints: const BoxConstraints(minHeight: 75),
                   child: OutlinedButton(
                     onPressed: () => _checkAnswer(option),
-                    style: OutlinedButton.styleFrom(backgroundColor: btnColor, side: BorderSide(color: borderColor, width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20)),
-                    child: Text(_isChecked ? "$option\n(${answerToInfo[option]})" : option, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700, color: textColor)),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: btnColor, 
+                      side: BorderSide(color: borderColor, width: 2), 
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20)
+                    ),
+                    child: Text(
+                      _isChecked ? "$option\n(${answerToInfo[option]})" : option, 
+                      textAlign: TextAlign.center, 
+                      style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700, color: textColor)
+                    ),
                   ),
                 ),
               );

@@ -281,11 +281,14 @@ class _LevelTestPageState extends State<LevelTestPage> {
                     Navigator.of(this.context).pop();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: isDark ? const Color(0xFF334155) : primaryColor,
+                    foregroundColor: isDark ? primaryColor : Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: isDark ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                    ),
                   ),
                   child: const Text("확인", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
@@ -301,6 +304,8 @@ class _LevelTestPageState extends State<LevelTestPage> {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final isDark = ThemeManager.isDarkMode;
+    final textColor = ThemeManager.textColor;
+
     if (_testData.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -313,12 +318,12 @@ class _LevelTestPageState extends State<LevelTestPage> {
       appBar: AppBar(
         title: Text(
           "실력 진단 테스트 (${_currentIndex + 1}/${_testData.length})",
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(fontWeight: FontWeight.w900, color: textColor),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: textColor),
           onPressed: () {
             _saveProgress();
             Navigator.pop(context);
@@ -333,14 +338,25 @@ class _LevelTestPageState extends State<LevelTestPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? primaryColor : (isDark ? Colors.white10 : Colors.grey[300]),
+                backgroundColor: _isChecked 
+                    ? (isDark ? const Color(0xFF334155) : primaryColor) 
+                    : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: isDark && _isChecked ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                ),
                 elevation: 0,
               ),
               child: Text(
                 _currentIndex < _testData.length - 1 ? "다음 문제" : "결과 확인",
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  fontSize: 17, 
+                  fontWeight: FontWeight.w900, 
+                  color: isDark 
+                      ? (_isChecked ? primaryColor : Colors.white24) 
+                      : Colors.white
+                ),
               ),
             ),
           ),
@@ -368,7 +384,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                   Text(
                     current['question'],
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: current['isSpellingToMeaning'] ? 32 : 26, fontWeight: FontWeight.w900, color: ThemeManager.textColor),
+                    style: TextStyle(fontSize: current['isSpellingToMeaning'] ? 32 : 26, fontWeight: FontWeight.w900, color: textColor),
                   ),
                 ],
               ),
@@ -379,20 +395,22 @@ class _LevelTestPageState extends State<LevelTestPage> {
               bool isSelected = option == _userSelectedAnswer;
               Color btnColor = isDark ? Colors.white.withOpacity(0.05) : Colors.white;
               Color borderColor = isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03);
-              Color textColor = ThemeManager.textColor;
+              Color currentTextColor = textColor;
+              
               if (_isChecked) {
                 if (isCorrectOption) {
-                  btnColor = Colors.green[400]!.withOpacity(0.15);
-                  borderColor = Colors.green[400]!;
-                  textColor = isDark ? Colors.green[300]! : Colors.green[700]!;
+                  btnColor = isDark ? Colors.green[900]!.withOpacity(0.3) : Colors.green[50]!;
+                  borderColor = isDark ? Colors.green[400]! : Colors.green[400]!;
+                  currentTextColor = isDark ? Colors.green[300]! : Colors.green[700]!;
                 } else if (isSelected) {
-                  btnColor = Colors.red[400]!.withOpacity(0.15);
-                  borderColor = Colors.red[400]!;
-                  textColor = isDark ? Colors.red[300]! : Colors.red[700]!;
+                  btnColor = isDark ? Colors.red[900]!.withOpacity(0.3) : Colors.red[50]!;
+                  borderColor = isDark ? Colors.red[400]! : Colors.red[400]!;
+                  currentTextColor = isDark ? Colors.red[300]! : Colors.red[700]!;
                 } else {
-                  textColor = ThemeManager.subTextColor.withOpacity(0.5);
+                  currentTextColor = isDark ? Colors.white10 : ThemeManager.subTextColor.withOpacity(0.5);
                 }
               }
+              
               return Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Container(
@@ -412,7 +430,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700,
-                        color: textColor,
+                        color: currentTextColor,
                       ),
                     ),
                   ),
