@@ -131,13 +131,13 @@ class _StudyPageState extends State<StudyPage> {
                                       height: 35,
                                       alignment: Alignment.center,
                                       decoration: BoxDecoration(
-                                        color: Colors.indigo[50],
+                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Text(
                                         "$wordNumber",
                                         style: TextStyle(
-                                          color: Colors.indigo[800],
+                                          color: Theme.of(context).colorScheme.primary,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -231,7 +231,7 @@ class _StudyPageState extends State<StudyPage> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),

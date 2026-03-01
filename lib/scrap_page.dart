@@ -93,7 +93,7 @@ class _ScrapPageState extends State<ScrapPage> {
                             "${word.category} • ${word.level}",
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.indigo[200],
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                             ),
                           ),
                         ],

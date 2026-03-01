@@ -82,6 +82,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _showResumeDialog(dynamic savedData) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -131,7 +132,7 @@ class _QuizPageState extends State<QuizPage> {
                       _restoreFromCache(savedData);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
+                      backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -151,6 +152,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _showQuestionCountSelection() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -165,8 +167,8 @@ class _QuizPageState extends State<QuizPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.format_list_numbered_rounded, color: Colors.indigo, size: 40),
+                decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(Icons.format_list_numbered_rounded, color: primaryColor, size: 40),
               ),
               const SizedBox(height: 24),
               const Text("문제 수 선택", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
@@ -185,10 +187,10 @@ class _QuizPageState extends State<QuizPage> {
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: Colors.indigo.withOpacity(0.2)),
+                        side: BorderSide(color: primaryColor.withOpacity(0.2)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: Text("$count문제", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      child: Text("$count문제", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor)),
                     ),
                   ),
                 );
@@ -347,8 +349,9 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_quizList.isEmpty && _quizData.isEmpty) return Scaffold(backgroundColor: const Color(0xFFF5F7FA), appBar: AppBar(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0), body: const Center(child: CircularProgressIndicator(color: Colors.indigo)));
-    if (_quizData.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.indigo)));
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    if (_quizList.isEmpty && _quizData.isEmpty) return Scaffold(backgroundColor: const Color(0xFFF5F7FA), appBar: AppBar(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0), body: Center(child: CircularProgressIndicator(color: primaryColor)));
+    if (_quizData.isEmpty) return Scaffold(body: Center(child: CircularProgressIndicator(color: primaryColor)));
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
@@ -371,7 +374,7 @@ class _QuizPageState extends State<QuizPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? (_isCorrect ? Colors.green : Colors.indigo) : Colors.grey[300],
+                backgroundColor: _isChecked ? (_isCorrect ? Colors.green : primaryColor) : Colors.grey[300],
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 elevation: 0,
@@ -394,7 +397,7 @@ class _QuizPageState extends State<QuizPage> {
                   children: [
                     Text(isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요", style: TextStyle(color: Colors.grey[500], fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 15),
-                    Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                    Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: primaryColor)),
                   ],
                 ),
               ),

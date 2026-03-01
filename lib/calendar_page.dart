@@ -224,22 +224,22 @@ class _CalendarPageState extends State<CalendarPage>
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     decoration: BoxDecoration(
-                      color: Colors.indigo[50],
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           "지금까지",
-                          style: TextStyle(color: Colors.indigo, fontSize: 14),
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           "총 $totalStudiedDays일 공부했어요!",
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.indigo,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],

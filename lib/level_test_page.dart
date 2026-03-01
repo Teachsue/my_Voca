@@ -46,6 +46,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
   }
 
   void _showResumeDialog(dynamic savedData) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,
       barrierDismissible: true, // 빈 공간 클릭 허용
@@ -95,7 +96,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                       _restoreFromCache(savedData);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
+                      backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -226,6 +227,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
   }
 
   void _showResultDialog() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     String recommendedLevel = '500';
     if (_levelScores['900+']! >= 3 && _levelScores['700']! >= 4 && _levelScores['500']! >= 4) {
       recommendedLevel = '900+';
@@ -251,8 +253,8 @@ class _LevelTestPageState extends State<LevelTestPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.bar_chart_rounded, color: Colors.indigo, size: 40),
+              decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+              child: Icon(Icons.bar_chart_rounded, color: primaryColor, size: 40),
             ),
             const SizedBox(height: 24),
             const Text("테스트 결과 📊", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black87)),
@@ -261,7 +263,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
             const SizedBox(height: 24),
             const Text("사용자님께 추천하는 레벨은", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 15)),
             const SizedBox(height: 8),
-            Text("TOEIC $recommendedLevel", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.indigo)),
+            Text("TOEIC $recommendedLevel", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: primaryColor)),
             const Text("입니다!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
             const SizedBox(height: 32),
             SizedBox(
@@ -272,7 +274,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -289,6 +291,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     if (_testData.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final currentQuestion = _testData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
@@ -320,7 +323,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? Colors.indigo : Colors.grey[300],
+                backgroundColor: _isChecked ? primaryColor : Colors.grey[300],
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 elevation: 0,
@@ -352,7 +355,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                   Text(
                     currentQuestion['question'],
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: Colors.indigo, letterSpacing: -0.5),
+                    style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: -0.5),
                   ),
                 ],
               ),
@@ -405,3 +408,4 @@ class _LevelTestPageState extends State<LevelTestPage> {
     );
   }
 }
+

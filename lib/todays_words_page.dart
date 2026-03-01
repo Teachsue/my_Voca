@@ -3,9 +3,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'word_model.dart';
 import 'todays_quiz_page.dart';
+import 'theme_manager.dart';
 
 class TodaysWordsPage extends StatefulWidget {
-  // ★ 카테고리와 레벨을 외부에서 받아옵니다.
   final String category;
   final String level;
 
@@ -31,156 +31,122 @@ class _TodaysWordsPageState extends State<TodaysWordsPage> {
   void _loadOrGenerateTodaysWords() {
     final wordBox = Hive.box<Word>('words');
     final cacheBox = Hive.box('cache');
-
     String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    // ★ 캐시 키(Key)를 난이도별로 다르게 만듭니다.
-    // 예: "2024-02-14_TOEIC_700"
     String cacheKey = "${todayStr}_${widget.category}_${widget.level}";
-
-    // 1. 저장된 키 목록 확인
     List<dynamic>? storedKeys = cacheBox.get(cacheKey);
 
     if (storedKeys != null && storedKeys.isNotEmpty) {
-      // CASE A: 오늘 이 난이도로 이미 뽑은 적이 있음 -> 저장된 것 불러오기
-      print(
-        "📅 [${widget.category} ${widget.level}] 오늘은 이미 뽑았습니다. 저장된 걸 보여줍니다.",
-      );
-
-      _todaysWords = storedKeys
-          .map((key) => wordBox.get(key))
-          .whereType<Word>()
-          .toList();
+      _todaysWords = storedKeys.map((key) => wordBox.get(key)).whereType<Word>().toList();
     } else {
-      // CASE B: 처음 뽑음 -> 조건에 맞는 단어만 추려서 랜덤 5개
-      print("✨ [${widget.category} ${widget.level}] 새로운 단어를 뽑습니다!");
-
-      // ★ 필터링: 타입이 Word이고, 카테고리와 레벨이 맞는 것만!
       final filteredWords = wordBox.values.where((word) {
-        return word.type == 'Word' &&
-            word.category == widget.category &&
-            word.level == widget.level;
+        return word.type == 'Word' && word.category == widget.category && word.level == widget.level;
       }).toList();
 
       if (filteredWords.isNotEmpty) {
-        filteredWords.shuffle(); // 섞기
-
-        // 10개 뽑기 (데이터가 10개보다 적으면 있는 만큼만)
+        filteredWords.shuffle();
         _todaysWords = filteredWords.take(10).toList();
-
-        // 키 저장
         List<int> keysToSave = _todaysWords.map((w) => w.key as int).toList();
         cacheBox.put(cacheKey, keysToSave);
       }
     }
-
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final bgGradient = ThemeManager.bgGradient;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        // 제목에 난이도 표시
-        title: Text("오늘의 ${widget.category} ${widget.level} 🔥"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        title: Text("오늘의 ${widget.category} ${widget.level}", style: const TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: _todaysWords.isEmpty
-          ? Center(
-              child: Text(
-                "${widget.category} ${widget.level} 단어가\n아직 충분하지 않아요! 😭",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-              itemCount: _todaysWords.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-              itemBuilder: (context, index) {
-                final word = _todaysWords[index];
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.red[50],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          "${index + 1}",
-                          style: TextStyle(
-                            color: Colors.red[400],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: bgGradient,
+          ),
+        ),
+        child: _todaysWords.isEmpty
+            ? const Center(child: Text("학습할 단어가 아직 충분하지 않아요! 😭", style: TextStyle(fontSize: 18, color: Colors.grey)))
+            : SafeArea(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+                  itemCount: _todaysWords.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final word = _todaysWords[index];
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.01),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              word.spelling,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      child: Row(
+                        children: [
+                          Text(
+                            "${index + 1}",
+                            style: TextStyle(
+                              color: primaryColor.withOpacity(0.4),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              word.meaning,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  word.spelling,
+                                  style: const TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  word.meaning,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.blueGrey[500],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _todaysWords.isEmpty
           ? null
           : FloatingActionButton.extended(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    // 퀴즈 페이지로 이동 (단어 목록 전달)
-                    builder: (context) => TodaysQuizPage(words: _todaysWords),
-                  ),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => TodaysQuizPage(words: _todaysWords)));
               },
-              backgroundColor: Colors.indigoAccent,
-              icon: const Icon(Icons.quiz),
-              label: const Text(
-                "퀴즈로 복습하기",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              backgroundColor: const Color(0xFF1E293B),
+              icon: const Icon(Icons.quiz_rounded, color: Colors.white),
+              label: const Text("퀴즈로 복습하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              elevation: 4,
             ),
     );
   }

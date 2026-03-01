@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'word_model.dart';
 import 'todays_quiz_page.dart';
+import 'theme_manager.dart';
 
 class TodaysWordListPage extends StatelessWidget {
   final List<Word> words;
@@ -14,89 +15,77 @@ class TodaysWordListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(isCompleted ? "오늘의 단어 복습" : "오늘의 단어 학습"),
+        title: Text(
+          isCompleted ? "복습 리스트" : "오늘의 단어",
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22),
+        ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: const Color(0xFF1E293B),
         elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
-          // 상단 안내 메시지
+          // 상단 상태 정보
           Container(
-            padding: const EdgeInsets.all(20),
             width: double.infinity,
-            color: isCompleted
-                ? Colors.green.withOpacity(0.05)
-                : Colors.indigo.withOpacity(0.05),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.05),
+            ),
+            child: Row(
               children: [
-                Text(
-                  isCompleted ? "오늘의 학습을 완료했습니다! 🎉" : "오늘 암기할 단어들입니다! 🧐",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isCompleted ? Colors.green : Colors.indigo,
-                  ),
+                Icon(
+                  isCompleted ? Icons.check_circle_rounded : Icons.auto_awesome_rounded,
+                  color: primaryColor,
+                  size: 24,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(width: 12),
                 Text(
-                  isCompleted ? "가볍게 훑어보며 복습해보세요." : "가볍게 훑어본 뒤 퀴즈에 도전하세요.",
-                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                  isCompleted ? "오늘의 모든 단어를 확인했습니다!" : "새로운 10개의 단어를 확인해 보세요",
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: primaryColor,
+                  ),
                 ),
               ],
             ),
           ),
 
-          // 단어 리스트
+          // 단어 리스트 (글자 크기 대폭 확대)
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(28, 20, 28, 120),
               itemCount: words.length,
+              separatorBuilder: (context, index) => Divider(color: Colors.black.withOpacity(0.05), height: 1),
               itemBuilder: (context, index) {
                 final word = words[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.green.shade50
-                              : Colors.indigo.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          "${index + 1}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isCompleted
-                                ? Colors.green.shade700
-                                : Colors.indigo.shade700,
-                          ),
+                      Text(
+                        "${index + 1}",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: primaryColor.withOpacity(0.3),
+                          fontFamily: 'Monospace',
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 24),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,16 +93,20 @@ class TodaysWordListPage extends StatelessWidget {
                             Text(
                               word.spelling,
                               style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 26, // ★ 단어 크기 확대
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF1E293B),
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
                             Text(
                               word.meaning,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.grey[600],
+                              style: const TextStyle(
+                                fontSize: 18, // ★ 뜻 크기 확대
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w600,
+                                height: 1.4,
                               ),
                             ),
                           ],
@@ -125,61 +118,52 @@ class TodaysWordListPage extends StatelessWidget {
               },
             ),
           ),
-
-          // 하단 버튼
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (isCompleted) {
-                      // 완료된 상태면 그냥 닫기
-                      Navigator.pop(context);
-                    } else {
-                      // 퀴즈 시작 (기다리지 않고 이동만 함)
-                      // ★ [중요 수정] await와 pop을 제거했습니다.
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TodaysQuizPage(words: words),
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted ? Colors.green : Colors.indigo,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 3,
+        ],
+      ),
+      
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.all(28),
+        child: SizedBox(
+          width: double.infinity,
+          height: 68, // ★ 버튼 더 큼직하게
+          child: ElevatedButton(
+            onPressed: () {
+              if (isCompleted) {
+                Navigator.pop(context);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TodaysQuizPage(words: words),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        isCompleted ? "복습 완료!" : "다 외웠어요! 퀴즈 시작",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        isCompleted
-                            ? Icons.check_circle_outline
-                            : Icons.arrow_forward_rounded,
-                      ),
-                    ],
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E293B),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  isCompleted ? "확인 완료" : "암기 완료! 퀴즈 시작",
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                const Icon(Icons.arrow_forward_rounded, size: 24),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -120,7 +120,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => QuizPage(dayWords: wrongWords, isWrongAnswerQuiz: true)));
               },
-              backgroundColor: Colors.indigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
               label: const Text("오답 퀴즈 시작", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )
@@ -146,6 +146,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
               separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final word = wrongWords[index];
+                final primaryColor = Theme.of(context).colorScheme.primary;
                 
                 // 등급에 따른 색상 정의
                 Color levelColor;
@@ -185,22 +186,22 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                           // 순서 번호 영역 (통일된 디자인)
                           Container(
                             width: 60,
-                            color: Colors.indigo.withOpacity(0.03),
+                            color: primaryColor.withOpacity(0.03),
                             child: Center(
                               child: Container(
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: Colors.indigo.withOpacity(0.08),
+                                  color: primaryColor.withOpacity(0.08),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
                                   child: Text(
                                     "${index + 1}",
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.indigo,
+                                      color: primaryColor,
                                     ),
                                   ),
                                 ),

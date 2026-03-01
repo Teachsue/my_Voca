@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'study_page.dart';
 import 'quiz_page.dart';
+import 'theme_manager.dart';
 
 class DaySelectionPage extends StatefulWidget {
   final String category;
@@ -20,380 +21,280 @@ class DaySelectionPage extends StatefulWidget {
 }
 
 class _DaySelectionPageState extends State<DaySelectionPage> {
-  final int _wordsPerDay = 20;
   List<List<Word>> _dayChunks = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAndChunkDays();
+    _loadWords();
   }
 
-  void _loadAndChunkDays() {
+  void _loadWords() {
     final box = Hive.box<Word>('words');
-
-    List<Word> filteredList = box.values.where((word) {
-      return word.category == widget.category &&
-          word.level == widget.level &&
-          word.type == 'Word';
-    }).toList();
-
-    final Map<String, Word> uniqueMap = {};
-    for (var w in filteredList) {
-      uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
-    }
-
-    List<Word> finalPool = uniqueMap.values.toList();
-
-    // 시드 값을 이용해 고정된 랜덤 순서로 섞기
-    int seed = (widget.category + widget.level).hashCode;
-    finalPool.shuffle(Random(seed));
+    final allWords = box.values
+        .where((w) =>
+            w.type == 'Word' &&
+            w.category == widget.category &&
+            w.level == widget.level)
+        .toList();
 
     _dayChunks = [];
-    for (var i = 0; i < finalPool.length; i += _wordsPerDay) {
-      int end = (i + _wordsPerDay < finalPool.length)
-          ? i + _wordsPerDay
-          : finalPool.length;
-      _dayChunks.add(finalPool.sublist(i, end));
-    }
-    // ==========================================
-    // ★ 수정된 로직: 짜투리 단어 합치기 (10개 미만일 때만)
-    // ==========================================
-    // 청크가 2개 이상이고, 마지막 청크의 단어가 10개 미만일 때만 합칩니다.
-    if (_dayChunks.length > 1 && _dayChunks.last.length < 10) {
-      // 마지막 짜투리 DAY를 리스트에서 빼옵니다.
-      List<Word> leftoverChunk = _dayChunks.removeLast();
-
-      // 그 앞의 DAY(이제 마지막이 된 DAY)에 짜투리 단어들을 전부 더해줍니다.
-      List<Word> mergedChunk = List<Word>.from(_dayChunks.last);
-      mergedChunk.addAll(leftoverChunk);
-
-      _dayChunks[_dayChunks.length - 1] = mergedChunk;
+    for (var i = 0; i < allWords.length; i += 20) {
+      _dayChunks.add(allWords.sublist(i, min(i + 20, allWords.length)));
     }
 
-    setState(() {});
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   void _checkSavedQuizAndStart() {
     final cacheBox = Hive.box('cache');
-    final String cacheKey = "quiz_match_${widget.category}_${widget.level}";
-    final savedData = cacheBox.get(cacheKey);
+    final savedData = cacheBox.get("quiz_progress_all_${widget.category}_${widget.level}");
 
-    if (savedData != null && (savedData['index'] ?? 0) > 0) {
+    if (savedData != null) {
+      _showResumeDialog(savedData);
+    } else {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => QuizPage(
+            dayWords: _dayChunks.expand((x) => x).toList(),
             category: widget.category,
             level: widget.level,
-            questionCount: 0,
           ),
         ),
       );
-    } else {
-      cacheBox.delete(cacheKey);
-      _showQuestionCountDialog();
     }
   }
 
-  void _showQuestionCountDialog() {
+  void _showResumeDialog(dynamic savedData) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text("이전에 풀던 기록이 있습니다. 이어서 푸시겠습니까?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Hive.box('cache').delete("quiz_progress_all_${widget.category}_${widget.level}");
+              Navigator.pop(context);
+              _checkSavedQuizAndStart();
+            },
+            child: Text("새로 풀기", style: TextStyle(color: Colors.grey[600])),
           ),
-          title: const Text(
-            "문제 수 선택",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          children: [10, 20, 30].map((count) {
-            return SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizPage(
-                      category: widget.category,
-                      level: widget.level,
-                      questionCount: count,
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10.0,
-                  horizontal: 8.0,
-                ),
-                child: Text(
-                  "$count문제",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizPage(
+                    dayWords: _dayChunks.expand((x) => x).toList(),
+                    category: widget.category,
+                    level: widget.level,
                   ),
                 ),
-              ),
-            );
-          }).toList(),
-        );
-      },
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+            child: const Text("이어서 풀기"),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_dayChunks.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: Text("${widget.category} ${widget.level}")),
-        body: const Center(child: Text("학습할 단어가 없습니다.")),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("${widget.category} ${widget.level} 학습하기"),
+        title: Text(
+          "${widget.category} ${widget.level}",
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_rounded),
-            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-          ),
-          const SizedBox(width: 8),
-        ],
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: ValueListenableBuilder(
-        valueListenable: Hive.box('cache').listenable(),
-        builder: (context, Box cacheBox, child) {
-          final String cacheKey =
-              "last_studied_day_${widget.category}_${widget.level}";
-          final int? lastStudiedDay = cacheBox.get(cacheKey);
-
-          return Column(
-            children: [
-              // ★ 최근 학습 바로가기 배너 추가
-              if (lastStudiedDay != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => StudyPage(
-                            category: widget.category,
-                            level: widget.level,
-                            allDayChunks: _dayChunks,
-                            initialDayIndex: lastStudiedDay - 1,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.indigo.withOpacity(0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.play_circle_fill,
-                              color: Colors.white, size: 30),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "학습 이어하기",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Text(
-                                  "마지막에 보던 DAY $lastStudiedDay로 바로 이동합니다.",
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios,
-                              color: Colors.white, size: 16),
-                        ],
-                      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildContinueBanner(context),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(28, 32, 28, 16),
+                  child: Text(
+                    "학습 리스트",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 0.8,
                     ),
+                    itemCount: _dayChunks.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == _dayChunks.length) return _buildTotalQuizCard(context);
+                      return _buildDayCard(context, index);
+                    },
                   ),
                 ),
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(20),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 15,
-                    mainAxisSpacing: 15,
-                    childAspectRatio: 1.0,
-                  ),
-                  itemCount: _dayChunks.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == _dayChunks.length) {
-                      return GestureDetector(
-                        onTap: _checkSavedQuizAndStart,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF5B86E5), Color(0xFF36D1DC)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF5B86E5).withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.psychology_alt_rounded,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                "전체 퀴즈",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
+              ],
+            ),
+    );
+  }
 
-                    final int dayNumber = index + 1;
-                    final int wordCount = _dayChunks[index].length;
-                    final bool isLastStudied = lastStudiedDay == dayNumber;
+  Widget _buildContinueBanner(BuildContext context) {
+    final cacheBox = Hive.box('cache');
+    final int lastStudiedDay = cacheBox.get('last_studied_day_${widget.category}_${widget.level}', defaultValue: 1);
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StudyPage(
-                              category: widget.category,
-                              level: widget.level,
-                              allDayChunks: _dayChunks,
-                              initialDayIndex: index,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: isLastStudied
-                                  ? Border.all(color: Colors.indigo, width: 2)
-                                  : null,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.indigo.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "DAY",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.indigo[300],
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  "$dayNumber",
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.indigo,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  "$wordCount 단어",
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (isLastStudied)
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: const BoxDecoration(
-                                  color: Colors.indigo,
-                                  borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(18),
-                                    bottomLeft: Radius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "최근 공부",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StudyPage(
+                category: widget.category,
+                level: widget.level,
+                allDayChunks: _dayChunks,
+                initialDayIndex: lastStudiedDay - 1,
               ),
-            ],
+            ),
           );
         },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "DAY $lastStudiedDay 이어하기",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "멈췄던 부분부터 바로 시작",
+                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayCard(BuildContext context, int index) {
+    final int dayNumber = index + 1;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final cacheBox = Hive.box('cache');
+    final int lastDay = cacheBox.get('last_studied_day_${widget.category}_${widget.level}', defaultValue: 1);
+    final bool isCurrent = lastDay == dayNumber;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StudyPage(
+              category: widget.category,
+              level: widget.level,
+              allDayChunks: _dayChunks,
+              initialDayIndex: index,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isCurrent ? primaryColor.withOpacity(0.05) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isCurrent ? primaryColor : const Color(0xFFF1F5F9),
+            width: isCurrent ? 2.5 : 1.5,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "$dayNumber",
+              style: TextStyle(
+                fontSize: 34, // ★ 숫자 크기 확대
+                fontWeight: FontWeight.w900, 
+                color: isCurrent ? primaryColor : const Color(0xFF1E293B),
+                letterSpacing: -1.0
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "DAY",
+              style: TextStyle(
+                fontSize: 11, 
+                fontWeight: FontWeight.w900, 
+                color: isCurrent ? primaryColor : const Color(0xFF94A3B8),
+                letterSpacing: 1.0
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTotalQuizCard(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: _checkSavedQuizAndStart,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 30),
+            SizedBox(height: 8),
+            Text(
+              "전체 퀴즈",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+            ),
+          ],
+        ),
       ),
     );
   }
