@@ -163,33 +163,35 @@ class _HomePageState extends State<HomePage> {
     String? recommendedLevel = cacheBox.get('user_recommended_level');
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FA), // 살짝 더 화사한 배경색
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: 25),
-                      _buildMainBanner(isCompleted),
-                      const SizedBox(height: 12),
-                      _buildLevelBanner(recommendedLevel),
-                      const SizedBox(height: 30),
-                      const Text("Study Category", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      const SizedBox(height: 16),
-                      _buildCategoryGrid(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 25.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 30),
+              _buildMainBanner(isCompleted),
+              const SizedBox(height: 16),
+              _buildLevelBanner(recommendedLevel),
+              const SizedBox(height: 40),
+              const Text(
+                "TOEIC 학습하기",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildLevelSelectionRow(),
+              const SizedBox(height: 40),
+              const Text(
+                "나의 학습 도구",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              _buildUtilityRow(),
+              const Spacer(),
+            ],
+          ),
         ),
       ),
     );
@@ -202,9 +204,15 @@ class _HomePageState extends State<HomePage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("안녕하세요! 👋", style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+            Text(
+              DateFormat('M월 d일 (E)', 'ko_KR').format(DateTime.now()),
+              style: TextStyle(fontSize: 15, color: Colors.indigo[400], fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 4),
-            const Text("오늘도 열공해볼까요?", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87, letterSpacing: -0.5)),
+            const Text(
+              "TOEIC 정복! 🔥",
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87, letterSpacing: -1.2),
+            ),
           ],
         ),
         Row(
@@ -234,12 +242,18 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderIconButton({required IconData icon, required Color color, required VoidCallback onTap}) {
     return Container(
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-      child: IconButton(icon: Icon(icon, color: color), onPressed: onTap),
+      child: IconButton(
+        icon: Icon(icon, color: color, size: 24),
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+      ),
     );
   }
 
@@ -251,15 +265,17 @@ class _HomePageState extends State<HomePage> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: isCompleted ? [Colors.grey.shade400, Colors.grey.shade500] : [const Color(0xFF5B86E5), const Color(0xFF36D1DC)],
+            colors: isCompleted 
+                ? [Colors.teal.shade300, Colors.teal.shade500] 
+                : [const Color(0xFF6A11CB), const Color(0xFF2575FC)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: (isCompleted ? Colors.grey : const Color(0xFF5B86E5)).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: (isCompleted ? Colors.teal : const Color(0xFF6A11CB)).withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 6))],
         ),
         child: Row(
           children: [
@@ -267,16 +283,24 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(isCompleted ? "오늘의 학습 완료! ✅" : "오늘의 영단어 🔥", style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(isCompleted ? "훌륭합니다! 내일 다시 만나요.\n복습은 언제나 환영이에요." : "매일 10개씩 꾸준히!\n지금 바로 시작하세요.", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.4)),
+                  Text(
+                    isCompleted ? "학습 완료! ✨" : "오늘의 단어 학습",
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isCompleted 
+                        ? "훌륭합니다! 꾸준함이 정답입니다.\n내일 새로운 단어로 만나요." 
+                        : "매일 엄선된 10개 단어,\n지금 바로 암기를 시작하세요!",
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.4),
+                  ),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-              child: Icon(isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
+              child: Icon(isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
             ),
           ],
         ),
@@ -299,73 +323,128 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.indigo.withOpacity(0.1)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.08), borderRadius: BorderRadius.circular(16)),
-              child: Icon(recommendedLevel != null ? Icons.auto_awesome_rounded : Icons.psychology_alt_rounded, color: Colors.indigo, size: 26),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.amber[50], shape: BoxShape.circle),
+              child: Icon(Icons.stars_rounded, color: Colors.amber[700], size: 28),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(recommendedLevel != null ? "내 실력에 맞는 맞춤 학습" : "내 진짜 실력은 어느 정도일까?", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 4),
-                  Text(recommendedLevel != null ? "💡 추천: TOEIC $recommendedLevel (이동하기)" : "딱 3분! 실력 진단 테스트 시작하기", style: TextStyle(fontSize: 13, color: recommendedLevel != null ? Colors.indigo : Colors.grey[500], fontWeight: FontWeight.w500)),
+                  Text(
+                    recommendedLevel != null ? "맞춤 추천 레벨: TOEIC $recommendedLevel" : "실력 진단 테스트",
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  Text(
+                    recommendedLevel != null ? "지금 바로 내 수준에 맞게 시작하세요!" : "3분 만에 정확한 내 실력 확인하기",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey[300], size: 24),
+            Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey[300], size: 18),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 15,
-      mainAxisSpacing: 15,
-      childAspectRatio: 1.25,
+  Widget _buildLevelSelectionRow() {
+    return Row(
       children: [
-        _buildMenuCard(title: "TOEIC", subtitle: "실전 대비", icon: Icons.business_center_rounded, color: Colors.blueAccent, onTap: () async { await _showLevelDialog('TOEIC', ['500', '700', '900+']); _refresh(); }),
-        _buildMenuCard(title: "OPIc", subtitle: "오픽 단어 연습", icon: Icons.record_voice_over_rounded, color: Colors.orangeAccent, onTap: () async { await _showLevelDialog('OPIC', ['IM', 'IH', 'AL']); _refresh(); }),
-        _buildMenuCard(title: "오답노트", subtitle: "틀린 문제 복습", icon: Icons.note_alt_rounded, color: Colors.green, onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage())); _refresh(); }),
-        _buildMenuCard(title: "나만의 단어장", subtitle: "저장한 단어 모아보기", icon: Icons.star_rounded, color: Colors.amber, onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage())); _refresh(); }),
+        _buildLevelMiniCard("500", "입문", const Color(0xFF4FACFE), const Color(0xFF00F2FE)),
+        const SizedBox(width: 12),
+        _buildLevelMiniCard("700", "중급", const Color(0xFF43E97B), const Color(0xFF38F9D7)),
+        const SizedBox(width: 12),
+        _buildLevelMiniCard("900+", "실전", const Color(0xFFFA709A), const Color(0xFFFEE140)),
       ],
     );
   }
 
-  Widget _buildMenuCard({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.06), blurRadius: 10, spreadRadius: 2, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withOpacity(0.08), shape: BoxShape.circle), child: Icon(icon, color: color, size: 26)),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 2),
-            Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-          ],
+  Widget _buildLevelMiniCard(String level, String desc, Color c1, Color c2) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: level)));
+          _refresh();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [c1, c2], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: c1.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))],
+          ),
+          child: Column(
+            children: [
+              Text(level, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(desc, style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildUtilityRow() {
+    return Row(
+      children: [
+        _buildUtilityCard("오답노트", Icons.edit_note_rounded, Colors.orange, () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage()));
+          _refresh();
+        }),
+        const SizedBox(width: 16),
+        _buildUtilityCard("중요 단어", Icons.star_rounded, Colors.amber, () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage()));
+          _refresh();
+        }),
+      ],
+    );
+  }
+
+  Widget _buildUtilityCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 5))],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Future<void> _startTodaysQuiz() async {
     final box = Hive.box<Word>('words');
@@ -398,30 +477,5 @@ class _HomePageState extends State<HomePage> {
     bool isCompleted = cacheBox.get("today_completed_$todayStr", defaultValue: false);
     if (!mounted) return;
     await Navigator.push(context, MaterialPageRoute(builder: (context) => TodaysWordListPage(words: todaysWords, isCompleted: isCompleted)));
-  }
-
-  Future<void> _showLevelDialog(String category, List<String> levels) async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text("$category 레벨 선택", style: const TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: levels.map((level) {
-              return ListTile(
-                title: Text(level, style: const TextStyle(fontWeight: FontWeight.w600)),
-                trailing: Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey[400]),
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: category, level: level)));
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
   }
 }

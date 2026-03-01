@@ -14,7 +14,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   int _totalWordsCount = 0;
   int _wrongAnswersCount = 0;
   int _learnedWordsCount = 0;
-
   bool _isTodayCompleted = false;
   String _recommendedLevel = "미응시";
 
@@ -26,7 +25,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   void _loadStatistics() {
     final wordBox = Hive.box<Word>('words');
-
     final Map<String, Word> uniqueMap = {};
     for (var w in wordBox.values.where((w) => w.type == 'Word')) {
       uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
@@ -40,548 +38,234 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     final cacheBox = Hive.box('cache');
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    _isTodayCompleted = cacheBox.get("today_completed_$todayStr", defaultValue: false);
+    _recommendedLevel = cacheBox.get('user_recommended_level', defaultValue: "미응시");
 
-    _isTodayCompleted = cacheBox.get(
-      "today_completed_$todayStr",
-      defaultValue: false,
-    );
-    _recommendedLevel = cacheBox.get(
-      'user_recommended_level',
-      defaultValue: "미응시",
-    );
-
-    List<String> learnedWords = List<String>.from(
-      cacheBox.get('learned_words', defaultValue: []),
-    );
+    List<String> learnedWords = List<String>.from(cacheBox.get('learned_words', defaultValue: []));
     _learnedWordsCount = learnedWords.length;
 
     setState(() {});
   }
 
   void _resetLevelTest() {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            "실력 진단 초기화",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            "기존 레벨 테스트 결과가 삭제되며\n메인 화면에서 다시 응시할 수 있습니다.\n진행하시겠습니까?",
-            style: TextStyle(height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("취소", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final cacheBox = Hive.box('cache');
-                cacheBox.delete('user_recommended_level');
-                cacheBox.delete('level_test_progress');
-
-                setState(() {
-                  _recommendedLevel = "미응시";
-                });
-
-                Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("레벨 테스트가 초기화되었습니다. 다시 도전해보세요! ✨"),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "초기화",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
+    _showConfirmDialog(
+      title: "진단 결과 초기화",
+      content: "레벨 테스트 기록을 삭제할까요?\n메인 화면에서 다시 응시할 수 있습니다.",
+      onConfirm: () {
+        final cacheBox = Hive.box('cache');
+        cacheBox.delete('user_recommended_level');
+        cacheBox.delete('level_test_progress');
+        setState(() => _recommendedLevel = "미응시");
       },
     );
   }
 
   void _resetAllRecords() {
+    _showConfirmDialog(
+      title: "전체 기록 초기화",
+      content: "모든 학습 데이터가 영구 삭제됩니다.\n정말 처음부터 다시 시작하시겠습니까?",
+      isDestructive: true,
+      onConfirm: () async {
+        if (Hive.isBoxOpen('wrong_answers')) await Hive.box<Word>('wrong_answers').clear();
+        await Hive.box('cache').clear();
+        final wordBox = Hive.box<Word>('words');
+        for (var word in wordBox.values) {
+          if (word.isScrap) {
+            word.isScrap = false;
+            word.save();
+          }
+        }
+        _loadStatistics();
+      },
+    );
+  }
+
+  void _showConfirmDialog({required String title, required String content, required VoidCallback onConfirm, bool isDestructive = false}) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-              SizedBox(width: 8),
-              Text(
-                "전체 기록 초기화",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ],
-          ),
-          content: const Text(
-            "학습한 단어장, 오답 노트, 나만의 단어장, 오늘의 퀴즈 완료 현황, 레벨 테스트 등 모든 개인 학습 데이터가 영구적으로 삭제됩니다.\n\n정말 처음부터 다시 시작하시겠습니까?",
-            style: TextStyle(height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text(
-                "취소",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        content: Text(content, style: TextStyle(color: Colors.grey[800], fontSize: 16, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소", style: TextStyle(color: Colors.grey, fontSize: 16))),
+          ElevatedButton(
+            onPressed: () {
+              onConfirm();
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDestructive ? Colors.redAccent : Colors.indigo,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                // 1. 오답 노트 비우기
-                if (Hive.isBoxOpen('wrong_answers')) {
-                  await Hive.box<Word>('wrong_answers').clear();
-                }
-
-                // 2. 캐시 데이터 비우기 (학습 기록, 레벨테스트 등)
-                await Hive.box('cache').clear();
-
-                // 3. 캘린더 학습 기록 비우기
-                try {
-                  if (Hive.isBoxOpen('study_records')) {
-                    await Hive.box('study_records').clear();
-                  } else {
-                    final recordBox = await Hive.openBox('study_records');
-                    await recordBox.clear();
-                  }
-                } catch (e) {
-                  print("캘린더 데이터 초기화 실패: $e");
-                }
-
-                // ★ 4. 나만의 단어장(북마크) 별표 떼기 로직 추가 ★
-                final wordBox = Hive.box<Word>('words');
-                for (var word in wordBox.values) {
-                  if (word.isScrap) {
-                    word.isScrap = false; // 스크랩 해제
-                    word.save(); // DB에 변경 사항 저장
-                  }
-                }
-
-                setState(() {
-                  _wrongAnswersCount = 0;
-                  _learnedWordsCount = 0;
-                  _isTodayCompleted = false;
-                  _recommendedLevel = "미응시";
-                });
-
-                if (!mounted) return;
-                Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("모든 학습 기록 및 나만의 단어장이 깔끔하게 초기화되었습니다! 🧹"),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.black87,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "전체 초기화",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+            child: const Text("확인", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    double progressRatio = _totalWordsCount > 0
-        ? (_learnedWordsCount / _totalWordsCount)
-        : 0.0;
-    String percentString = (progressRatio * 100).toStringAsFixed(1);
+    double progressRatio = _totalWordsCount > 0 ? (_learnedWordsCount / _totalWordsCount) : 0.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          "학습 통계 및 설정 📊",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        title: const Text("학습 통계 및 설정", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19)),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, size: 30, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "나의 학습 현황",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 상단 2분할 카드
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      title: "추천 레벨",
-                      value: _recommendedLevel == "미응시"
-                          ? "평가 필요"
-                          : "TOEIC $_recommendedLevel",
-                      icon: Icons.psychology_alt_rounded,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildStatCard(
-                      title: "오늘의 목표",
-                      value: _isTodayCompleted ? "달성 완료" : "진행 중",
-                      icon: _isTodayCompleted
-                          ? Icons.check_circle_rounded
-                          : Icons.directions_run_rounded,
-                      color: _isTodayCompleted ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 진도율 및 오답노트 카드 (UI 개선 적용)
-            _buildProgressCard(
-              title: "전체 학습 진도율",
-              subtitle: "학습한 단어: $_learnedWordsCount / 총 $_totalWordsCount단어",
-              valueText: "$percentString%",
-              icon: Icons.trending_up_rounded,
-              color: Colors.blueAccent,
-              progressValue: progressRatio,
-            ),
-            const SizedBox(height: 16),
-
-            _buildProgressCard(
-              title: "복습이 필요한 단어",
-              subtitle: "오답 노트에 쌓인 단어를 틈틈이 복습하세요!",
-              valueText: "$_wrongAnswersCount개",
-              icon: Icons.note_alt_rounded,
-              color: Colors.redAccent,
-              progressValue: _totalWordsCount > 0
-                  ? (_wrongAnswersCount / _totalWordsCount)
-                  : 0.0,
-            ),
-
-            const SizedBox(height: 40),
-
-            // 데이터 관리 영역 (설정 메뉴 스타일로 개선)
-            const Text(
-              "데이터 관리",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.06),
-                    blurRadius: 15,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsTile(
-                    title: "레벨 테스트 초기화",
-                    subtitle: "다시 실력을 진단받고 싶을 때 사용하세요",
-                    icon: Icons.refresh_rounded,
-                    iconColor: Colors.blueGrey,
-                    onTap: _recommendedLevel != "미응시" ? _resetLevelTest : null,
-                  ),
-                  Divider(
-                    height: 1,
-                    color: Colors.grey.shade100,
-                    indent: 20,
-                    endIndent: 20,
-                  ),
-                  _buildSettingsTile(
-                    title: "모든 학습 기록 초기화",
-                    subtitle: "데이터를 완전히 지우고 처음부터 시작합니다",
-                    icon: Icons.delete_forever_rounded,
-                    iconColor: Colors.redAccent,
-                    textColor: Colors.redAccent,
-                    onTap: _resetAllRecords,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            Center(
-              child: Text(
-                "꾸준함이 실력을 만듭니다!\n오늘도 파이팅하세요 🔥",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                  height: 1.5,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader("나의 학습 진도"),
+                _buildMainDashboard(progressRatio),
+                const SizedBox(height: 25),
+                _buildSectionHeader("학습 요약"),
+                Row(
+                  children: [
+                    Expanded(child: _buildInfoCard("추천 레벨", _recommendedLevel == "미응시" ? "미응시" : "TOEIC $_recommendedLevel", Icons.stars_rounded, Colors.indigo)),
+                    const SizedBox(width: 14),
+                    Expanded(child: _buildInfoCard("오늘 목표", _isTodayCompleted ? "달성" : "진행중", Icons.local_fire_department_rounded, _isTodayCompleted ? Colors.orange : Colors.grey[400]!)),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 14),
+                _buildWideInfoCard("복습 필요한 단어", "$_wrongAnswersCount개", Icons.assignment_late_rounded, Colors.redAccent),
+                const SizedBox(height: 30),
+                _buildSectionHeader("시스템 설정"),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.black.withOpacity(0.03)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingsTile("레벨 테스트 초기화", Icons.refresh_rounded, Colors.blueGrey, _recommendedLevel != "미응시" ? _resetLevelTest : null),
+                      Divider(height: 1, color: Colors.grey[100]),
+                      _buildSettingsTile("모든 학습 기록 초기화", Icons.delete_forever_rounded, Colors.redAccent, _resetAllRecords),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40), // 하단에 기분 좋은 여백 남김
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // 상단 작은 네모 카드
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.06),
-            blurRadius: 15,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87)),
     );
   }
 
-  // ★ 변경됨: 진도율 / 오답노트 전용 세련된 프로그레스 카드
-  Widget _buildProgressCard({
-    required String title,
-    required String subtitle,
-    required String valueText,
-    required IconData icon,
-    required Color color,
-    required double progressValue,
-  }) {
+  Widget _buildMainDashboard(double ratio) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.06),
-            blurRadius: 15,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 4))],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-              Text(
-                valueText,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                ),
-              ),
+              const Text("전체 진도율", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54)),
+              Text("${(ratio * 100).toStringAsFixed(1)}%", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.indigo)),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            subtitle,
-            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: progressValue.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: color.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              value: ratio.clamp(0.0, 1.0),
+              minHeight: 12,
+              backgroundColor: Colors.indigo.withOpacity(0.05),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.indigo),
             ),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded, size: 16, color: Colors.grey[400]),
+              const SizedBox(width: 8),
+              Text("$_learnedWordsCount / $_totalWordsCount 단어 학습 완료", style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500)),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // ★ 추가됨: 데이터 관리 버튼들을 위한 리스트 타일 위젯
-  Widget _buildSettingsTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    Color textColor = Colors.black87,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: onTap == null ? Colors.grey : textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: onTap == null ? Colors.transparent : Colors.grey[400],
-                size: 20,
-              ),
-            ],
-          ),
-        ),
+  Widget _buildInfoCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10, offset: const Offset(0, 2))],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 12),
+          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWideInfoCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 14),
+          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Spacer(),
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile(String title, IconData icon, Color color, VoidCallback? onTap) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: Icon(icon, color: onTap == null ? Colors.grey[200] : color, size: 24),
+      title: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: onTap == null ? Colors.grey[300] : Colors.black87)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 24),
     );
   }
 }

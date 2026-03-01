@@ -4,8 +4,8 @@ import 'package:hive/hive.dart';
 import 'word_model.dart';
 
 class DataLoader {
-  // ★ 에빙하우스 필드 추가로 인해 데이터 구조가 변경되었으므로 버전을 올립니다.
-  static const int DATA_VERSION = 2;
+  // ★ 오픽 데이터 제거 및 토익 전용 구성을 위해 버전을 올립니다.
+  static const int DATA_VERSION = 3;
 
   static Future<void> loadData() async {
     final wordBox = Hive.box<Word>('words');
@@ -49,12 +49,16 @@ class DataLoader {
       for (var item in jsonList) {
         String spelling = item['spelling'] ?? '';
         String type = item['type'] ?? 'Word';
+        String category = item['category'] ?? 'Etc';
+
+        // ★ 오픽 제외하고 토익 단어만 로드
+        if (category != 'TOEIC') continue;
         
         // 고유 키 생성 (spelling + type)
         String key = "${type}_$spelling";
 
         final word = Word(
-          category: item['category'] ?? 'Etc',
+          category: category,
           level: item['level'] ?? 'Basic',
           spelling: spelling,
           meaning: item['meaning'] ?? '',
