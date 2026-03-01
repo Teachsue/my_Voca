@@ -72,11 +72,13 @@ class _HomePageState extends State<HomePage> {
     String? recommendedLevel = cacheBox.get('user_recommended_level');
     final primaryColor = Theme.of(context).colorScheme.primary;
     final textColor = ThemeManager.textColor;
+    final isDark = ThemeManager.isDarkMode;
 
-    return SeasonalBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      body: SeasonalBackground(
+        child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 15.0),
             child: Column(
@@ -105,13 +107,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHeader(BuildContext context, Color textColor, Color primaryColor) {
+    final isDark = ThemeManager.isDarkMode;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ★ 포켓보카 정식 브랜드 로고 디자인 (미니멀 대비 스타일)
+            // ★ 포켓보카 브랜드 로고 디자인 (다크모드 웨이트 최적화)
             RichText(
               text: TextSpan(
                 children: [
@@ -119,7 +122,7 @@ class _HomePageState extends State<HomePage> {
                     text: "포켓",
                     style: TextStyle(
                       fontSize: 28,
-                      fontWeight: FontWeight.w800, // ★ 단단한 볼드
+                      fontWeight: FontWeight.w800,
                       color: textColor,
                       letterSpacing: -1.2,
                     ),
@@ -128,7 +131,7 @@ class _HomePageState extends State<HomePage> {
                     text: "보카",
                     style: TextStyle(
                       fontSize: 28,
-                      fontWeight: FontWeight.w200, // ★ 아주 가볍고 얇은 스타일
+                      fontWeight: isDark ? FontWeight.w400 : FontWeight.w200, // ★ 다크모드 가독성 강화
                       color: primaryColor,
                       letterSpacing: -0.5,
                     ),
@@ -137,16 +140,13 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              DateFormat('EEEE, MMM d').format(DateTime.now()).toUpperCase(),
-              style: TextStyle(fontSize: 10, color: ThemeManager.subTextColor, fontWeight: FontWeight.w700, letterSpacing: 1.5),
-            ),
+            Text(DateFormat('EEEE, MMM d').format(DateTime.now()).toUpperCase(), style: TextStyle(fontSize: 10, color: ThemeManager.subTextColor, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
           ],
         ),
         Row(
           children: [
             _buildHeaderIconButton(
-              icon: Icons.calendar_month_rounded,
+              icon: Icons.calendar_today_rounded,
               color: primaryColor,
               onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const CalendarPage())); _refresh(); },
             ),
@@ -164,31 +164,42 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderIconButton({required IconData icon, required Color color, required VoidCallback onTap}) {
     final isDark = ThemeManager.isDarkMode;
-    return Container(
-      width: 46, height: 46,
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.8),
-        shape: BoxShape.circle,
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 46, height: 46,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 22),
       ),
-      child: IconButton(icon: Icon(icon, color: color, size: 22), onPressed: onTap, padding: EdgeInsets.zero),
     );
   }
 
   Widget _buildMainBanner(BuildContext context, bool isCompleted) {
-    final bannerGradient = ThemeManager.bannerGradient;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
+    
+    final Color bgColor = isDark 
+        ? (isCompleted ? const Color(0xFF1E293B) : primaryColor.withOpacity(0.12))
+        : (isCompleted ? const Color(0xFF1E293B) : primaryColor);
+    
+    final Color contentColor = isDark 
+        ? (isCompleted ? ThemeManager.subTextColor : primaryColor)
+        : Colors.white;
+
     return GestureDetector(
       onTap: () async { await _startTodaysQuiz(); _refresh(); },
       child: Container(
         width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isCompleted ? [const Color(0xFF4B5563), const Color(0xFF1F2937)] : bannerGradient,
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-          ),
+          color: bgColor,
           borderRadius: BorderRadius.circular(32),
-          boxShadow: [BoxShadow(color: (isCompleted ? Colors.black12 : bannerGradient[0].withOpacity(0.3)), blurRadius: 15, offset: const Offset(0, 8))],
+          border: isDark && !isCompleted 
+              ? Border.all(color: primaryColor.withOpacity(0.4), width: 1.5) 
+              : null,
+          boxShadow: isDark ? [] : [BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))],
         ),
         child: Row(
           children: [
@@ -196,17 +207,19 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                  Text(
+                    isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", 
+                    style: TextStyle(color: contentColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)
+                  ),
                   const SizedBox(height: 6),
-                  Text(isCompleted ? "멋진 성취입니다. 내일 또 만나요!" : "매일 10개 단어로 만드는 기적", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(
+                    isCompleted ? "정말 고생하셨습니다." : "매일 10개 단어로 만드는 기적", 
+                    style: TextStyle(color: contentColor.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w600)
+                  ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
-            ),
+            Icon(isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, color: contentColor, size: 28),
           ],
         ),
       ),
@@ -225,7 +238,7 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : (hasResult ? const Color(0xFFF0F7FF) : Colors.white.withOpacity(0.8)),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white.withOpacity(0.8),
           borderRadius: BorderRadius.circular(22),
         ),
         child: Row(
@@ -244,11 +257,7 @@ class _HomePageState extends State<HomePage> {
     return GridView.count(
       shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.3,
-      children: [
-        _buildLevelCard(context, "500", "입문", Colors.teal),
-        _buildLevelCard(context, "700", "중급", Colors.indigo),
-        _buildLevelCard(context, "900+", "실전", Colors.purple),
-      ],
+      children: [_buildLevelCard(context, "500", "입문", Colors.teal), _buildLevelCard(context, "700", "중급", Colors.indigo), _buildLevelCard(context, "900+", "실전", Colors.purple)],
     );
   }
 
@@ -257,14 +266,11 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => DaySelectionPage(category: 'TOEIC', level: level))); _refresh(); },
       child: Container(
-        decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(level, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? color.withOpacity(0.8) : color, letterSpacing: -0.5)),
-            Text(desc, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[600], fontWeight: FontWeight.w700)),
-          ],
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white, 
+          borderRadius: BorderRadius.circular(20),
         ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text(level, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? color.withOpacity(0.8) : color, letterSpacing: -0.5)), Text(desc, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.grey[600], fontWeight: FontWeight.w700))]),
       ),
     );
   }
@@ -272,32 +278,24 @@ class _HomePageState extends State<HomePage> {
   Widget _buildUtilityRow(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _buildCategoryCard(context, "오답노트", "틀린 단어", Icons.edit_document, const Color(0xFFF59E0B), () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage())); _refresh(); })),
+        Expanded(child: _buildCategoryCard(context, "오답노트", Icons.edit_document, const Color(0xFFF59E0B), () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const WrongAnswerPage())); _refresh(); })),
         const SizedBox(width: 12),
-        Expanded(child: _buildCategoryCard(context, "중요단어", "스크랩", Icons.star_rounded, const Color(0xFFFACC15), () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage())); _refresh(); })),
+        Expanded(child: _buildCategoryCard(context, "중요단어", Icons.star_rounded, const Color(0xFFFACC15), () async { await Navigator.push(context, MaterialPageRoute(builder: (context) => const ScrapPage())); _refresh(); })),
       ],
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildCategoryCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
     final isDark = ThemeManager.isDarkMode;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.85), borderRadius: BorderRadius.circular(24)),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: 10),
-            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: ThemeManager.textColor)),
-            Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[600], fontWeight: FontWeight.w600)),
-          ],
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white, 
+          borderRadius: BorderRadius.circular(24),
         ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: color, size: 24), const SizedBox(width: 12), Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: ThemeManager.textColor))]),
       ),
     );
   }
@@ -309,7 +307,8 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           content: Column(
@@ -327,7 +326,33 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Expanded(child: TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text("다음에 할게요", style: TextStyle(color: ThemeManager.subTextColor, fontSize: 16, fontWeight: FontWeight.w600)))),
                   const SizedBox(width: 12),
-                  Expanded(child: ElevatedButton(onPressed: () async { Navigator.pop(dialogContext); await Navigator.push(context, MaterialPageRoute(builder: (context) => const LevelTestPage())); _refresh(); }, style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: const Text("시작하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)))),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async { 
+                        Navigator.pop(dialogContext); 
+                        await Navigator.push(context, MaterialPageRoute(builder: (context) => const LevelTestPage())); 
+                        _refresh(); 
+                      }, 
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF334155) : primaryColor, 
+                        foregroundColor: Colors.white, 
+                        elevation: 0, 
+                        padding: const EdgeInsets.symmetric(vertical: 16), 
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: isDark ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                        )
+                      ), 
+                      child: Text(
+                        "시작하기", 
+                        style: TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold, 
+                          color: isDark ? primaryColor : Colors.white
+                        )
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -339,26 +364,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCriteriaItem(BuildContext context, IconData icon, String title, String desc) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: primaryColor.withOpacity(0.6)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: ThemeManager.textColor)),
-                const SizedBox(height: 2),
-                Text(desc, style: TextStyle(fontSize: 13, color: ThemeManager.subTextColor)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return Padding(padding: const EdgeInsets.only(bottom: 16), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20, color: primaryColor.withOpacity(0.6)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: ThemeManager.textColor)), const SizedBox(height: 2), Text(desc, style: TextStyle(fontSize: 13, color: ThemeManager.subTextColor))]))]));
   }
 
   Future<void> _startTodaysQuiz() async {

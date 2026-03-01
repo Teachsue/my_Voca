@@ -137,22 +137,34 @@ class TodaysWordListPage extends StatelessWidget {
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SizedBox(
-            width: double.infinity, height: 56,
+          child: Container(
+            width: double.infinity, 
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: isDark ? [] : [BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
+            ),
             child: ElevatedButton(
               onPressed: () {
                 if (isCompleted) Navigator.pop(context);
                 else Navigator.push(context, MaterialPageRoute(builder: (context) => TodaysQuizPage(words: words)));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCompleted ? const Color(0xFF374151) : primaryColor,
+                backgroundColor: isDark ? const Color(0xFF334155) : (isCompleted ? const Color(0xFF455A64) : primaryColor),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: isDark ? BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
+                ),
                 elevation: 0,
               ),
               child: Text(
                 isCompleted ? "확인 완료" : "다 외웠어요! 퀴즈 시작",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? primaryColor : Colors.white,
+                ),
               ),
             ),
           ),

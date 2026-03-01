@@ -27,9 +27,9 @@ class SeasonalBackground extends StatelessWidget {
         ),
       ),
       child: Stack(
-        // ★ clipBehavior를 하드엣지로 변경하여 화면 밖 노란색 경고선 방지
         clipBehavior: Clip.hardEdge, 
         children: [
+          // ★ 다크모드에서도 아주 미세하게 아이콘을 배치하여 심심함을 방지
           Positioned(
             top: -60,
             right: -60,
@@ -37,7 +37,7 @@ class SeasonalBackground extends StatelessWidget {
               icon,
               size: 300,
               color: isDark 
-                  ? Colors.white.withOpacity(0.03) 
+                  ? Colors.white.withOpacity(0.02) // 아주 살짝 비치는 느낌
                   : primaryColor.withOpacity(0.07),
             ),
           ),

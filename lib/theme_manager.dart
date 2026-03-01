@@ -44,15 +44,15 @@ class ThemeManager {
 
   static Season get effectiveSeason => selectedSeason == Season.auto ? systemSeason : selectedSeason;
 
-  // ★ 다크모드에서 더 부드럽게 보이는 포인트 컬러
+  // ★ 다크모드 전용 프리미엄 파스텔 포인트 컬러 (로고 및 포인트용)
   static Color get pointColor {
     if (isDarkMode) {
       switch (effectiveSeason) {
-        case Season.spring: return const Color(0xFFFF85A1);
-        case Season.summer: return const Color(0xFF4FC3F7);
-        case Season.autumn: return const Color(0xFFFFB74D);
-        case Season.winter: return const Color(0xFFAABDC1);
-        default: return const Color(0xFF9FA8DA);
+        case Season.spring: return const Color(0xFFFBC2EB); // 소프트 로즈
+        case Season.summer: return const Color(0xFFA5F3FC); // 크리스탈 민트
+        case Season.autumn: return const Color(0xFFFED7AA); // 멜로우 피치
+        case Season.winter: return const Color(0xFFE2E8F0); // 아이스 실버
+        default: return const Color(0xFFC7D2FE);
       }
     }
     switch (effectiveSeason) {
@@ -64,29 +64,28 @@ class ThemeManager {
     }
   }
 
-  // ★ 다크모드 대비 최적화 텍스트 컬러
-  static Color get textColor => isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+  static Color get textColor => isDarkMode ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B);
   static Color get subTextColor => isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
-  static List<Color> get bannerGradient {
-    if (isDarkMode) return [const Color(0xFF334155), const Color(0xFF1E293B)];
-    switch (effectiveSeason) {
-      case Season.spring: return [const Color(0xFFFFB7C5), const Color(0xFFF08080)];
-      case Season.summer: return [const Color(0xFF4FC3F7), const Color(0xFF1976D2)];
-      case Season.autumn: return [const Color(0xFFFBC02D), const Color(0xFFE64A19)];
-      case Season.winter: return [const Color(0xFF90A4AE), const Color(0xFF455A64)];
-      default: return [const Color(0xFF5B86E5), const Color(0xFF36D1DC)];
-    }
-  }
-
   static List<Color> get bgGradient {
-    if (isDarkMode) return [const Color(0xFF0F172A), const Color(0xFF020617)]; // 더 깊고 차분한 다크 네이비
+    if (isDarkMode) return [const Color(0xFF0F172A), const Color(0xFF0F172A)]; 
     switch (effectiveSeason) {
       case Season.spring: return [const Color(0xFFFFF0F5), const Color(0xFFFFFFFF)];
       case Season.summer: return [const Color(0xFFE0F7FA), const Color(0xFFFFFFFF)];
       case Season.autumn: return [const Color(0xFFFFF3E0), const Color(0xFFFFFFFF)];
       case Season.winter: return [const Color(0xFFF1F4F8), const Color(0xFFFFFFFF)];
       default: return [const Color(0xFFF8FAFC), const Color(0xFFFFFFFF)];
+    }
+  }
+
+  static List<Color> get bannerGradient {
+    if (isDarkMode) return [const Color(0xFF1E293B), const Color(0xFF1E293B)];
+    switch (effectiveSeason) {
+      case Season.spring: return [const Color(0xFFFFB7C5), const Color(0xFFF08080)];
+      case Season.summer: return [const Color(0xFF4FC3F7), const Color(0xFF1976D2)];
+      case Season.autumn: return [const Color(0xFFFBC02D), const Color(0xFFE64A19)];
+      case Season.winter: return [const Color(0xFF90A4AE), const Color(0xFF455A64)];
+      default: return [const Color(0xFF5B86E5), const Color(0xFF36D1DC)];
     }
   }
 
@@ -124,7 +123,7 @@ class ThemeManager {
         brightness: brightness,
         surface: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
       ),
-      scaffoldBackgroundColor: isDarkMode ? const Color(0xFF020617) : Colors.transparent,
+      scaffoldBackgroundColor: isDarkMode ? const Color(0xFF0F172A) : Colors.transparent,
       cardColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
