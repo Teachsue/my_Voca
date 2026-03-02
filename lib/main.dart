@@ -233,8 +233,16 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMainBanner(BuildContext context, bool isCompleted) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final isDark = ThemeManager.isDarkMode;
-    final Color bgColor = isDark ? (isCompleted ? const Color(0xFF1E293B) : primaryColor.withOpacity(0.12)) : (isCompleted ? const Color(0xFF1E293B) : primaryColor);
-    final Color contentColor = isDark ? (isCompleted ? ThemeManager.subTextColor : primaryColor) : Colors.white;
+    
+    // 라이트 모드 완료 시: 화이트 카드 + 포인트 컬러 테두리/그림자
+    // 그 외: 기존 테마 로직 유지
+    final Color bgColor = isDark 
+        ? (isCompleted ? const Color(0xFF1E293B) : primaryColor.withOpacity(0.12)) 
+        : (isCompleted ? Colors.white : primaryColor);
+    
+    final Color contentColor = isDark 
+        ? (isCompleted ? ThemeManager.subTextColor : primaryColor) 
+        : (isCompleted ? primaryColor : Colors.white);
 
     return GestureDetector(
       onTap: () async { await _startTodaysQuiz(); _refresh(); },
@@ -243,13 +251,42 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(32),
-          border: isDark && !isCompleted ? Border.all(color: primaryColor.withOpacity(0.4), width: 1.5) : null,
-          boxShadow: isDark ? [] : [BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))],
+          border: !isDark && isCompleted 
+              ? Border.all(color: primaryColor.withOpacity(0.4), width: 2) 
+              : (isDark && !isCompleted ? Border.all(color: primaryColor.withOpacity(0.4), width: 1.5) : null),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: primaryColor.withOpacity(isCompleted ? 0.12 : 0.2), 
+              blurRadius: 20, 
+              offset: const Offset(0, 10)
+            )
+          ],
         ),
         child: Row(
           children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", style: TextStyle(color: contentColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)), const SizedBox(height: 6), Text(isCompleted ? "정말 고생하셨습니다." : "매일 10개 단어로 만드는 기적", style: TextStyle(color: contentColor.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w600))])),
-            Icon(isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, color: contentColor, size: 28),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                isCompleted ? "학습 완료! ✅" : "오늘의 단어 학습", 
+                style: TextStyle(color: contentColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)
+              ), 
+              const SizedBox(height: 6), 
+              Text(
+                isCompleted ? "오늘의 목표를 달성했습니다." : "매일 10개 단어로 만드는 기적", 
+                style: TextStyle(color: contentColor.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w600)
+              )
+            ])),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isCompleted && !isDark ? primaryColor.withOpacity(0.1) : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, 
+                color: contentColor, 
+                size: 28
+              ),
+            ),
           ],
         ),
       ),

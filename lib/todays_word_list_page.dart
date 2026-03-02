@@ -44,7 +44,7 @@ class TodaysWordListPage extends StatelessWidget {
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isCompleted 
+                  colors: isDark && isCompleted 
                     ? [const Color(0xFF4B5563), const Color(0xFF1F2937)] 
                     : bannerGradient,
                   begin: Alignment.topLeft,
@@ -53,9 +53,9 @@ class TodaysWordListPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+                    color: isDark ? Colors.transparent : (bannerGradient.last).withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -71,7 +71,7 @@ class TodaysWordListPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          isCompleted ? "정말 고생하셨습니다." : "10개 단어를 완벽히 익혀보세요.",
+                          isCompleted ? "오늘의 목표를 모두 달성했습니다." : "10개 단어를 완벽히 익혀보세요.",
                           style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
                         ),
                       ],
@@ -150,7 +150,7 @@ class TodaysWordListPage extends StatelessWidget {
                 else Navigator.push(context, MaterialPageRoute(builder: (context) => TodaysQuizPage(words: words)));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? const Color(0xFF334155) : (isCompleted ? const Color(0xFF455A64) : primaryColor),
+                backgroundColor: isDark ? const Color(0xFF334155) : primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -159,11 +159,11 @@ class TodaysWordListPage extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                isCompleted ? "확인 완료" : "다 외웠어요! 퀴즈 시작",
-                style: TextStyle(
+                isCompleted ? "학습 완료 확인" : "다 외웠어요! 퀴즈 시작",
+                style: const TextStyle(
                   fontSize: 16, 
                   fontWeight: FontWeight.bold,
-                  color: isDark ? primaryColor : Colors.white,
+                  color: Colors.white,
                 ),
               ),
             ),

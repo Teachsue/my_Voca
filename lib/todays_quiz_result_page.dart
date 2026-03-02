@@ -98,7 +98,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFF1E293B),
+                  backgroundColor: isDark ? const Color(0xFF334155) : color,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -108,7 +108,7 @@ class TodaysQuizResultPage extends StatelessWidget {
                 ),
                 child: Text(
                   "완료 (메인으로)", 
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: isDark ? color : Colors.white)
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)
                 ),
               ),
             ),
